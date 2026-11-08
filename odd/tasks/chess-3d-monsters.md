@@ -17,15 +17,15 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 
 | ID | Specs | Route | Status | Commit |
 |----|-------|-------|--------|--------|
-| T1 | S2, S7 | inline | done | scaffold |
-| T2 | S1 | inline | pending | |
-| T3 | S2, S3 | inline | pending | |
-| T4 | S1 | inline | pending | |
-| T5 | S3, S5 | inline | pending | |
-| T6 | S4, S5 | inline | pending | |
-| T7 | S3, S6 | inline | pending | |
-| T8 | S1 | inline | pending | |
-| T9 | S3 | inline | pending | |
+| T1 | S2, S7 | inline | done | 9221d5f |
+| T2 | S1 | inline | done (RED→GREEN, 13 tests) | 681ec9e |
+| T3 | S2, S3 | inline | done (visual check in Chrome) | 07677c8 |
+| T4 | S1 | inline | done (real mouse click flow verified) | 07677c8, c50ce51 |
+| T5 | S3, S5 | inline | done (#lab view) | 07677c8 |
+| T6 | S4, S5 | inline | done (pawn, knight, bishop, queen inspected frame by frame; all six styles exercised by a 73-ply scripted game) | 07677c8, 42bb0f4 |
+| T7 | S3, S6 | inline | done (not audible-verified; no errors) | 07677c8 |
+| T8 | S1 | inline | done | 07677c8, c50ce51 |
+| T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
 - T2 Domain: game model over chess.js with stable piece ids and domain events (moved, captured, castled, en passant, promoted, check, game over), undo. Unit tests.
@@ -46,3 +46,6 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L3 (2026-11-08): "si, desactiva la revisión por hoy." → `gentle-ai review mode disable --scope clone` executed; RDD off for this clone only. Re-enable tomorrow with `gentle-ai review mode enable --scope clone`.
 - L4 (2026-11-08): "te doy permiso para descargarte algún modelo 3d chulo de las piezas por internet si lo necesitas y es gratuito. Quizá puedas empezar por algo disponible online y luego lo modificamos. Pero el 3D deberá ser flipante. Me imagino a piezas convirtiendose en monstruos para comerse las unas a las otras."
 - L5: Decision A1 (procedural models) taken to avoid licence ambiguity and because the transformation effect needs per-part control.
+- L6 (2026-11-08, overnight run): Implemented T1–T9. Verification: `npm test` 24/24 green; `npm run build` OK; visual checks in Chrome through the claude-in-chrome MCP (screenshots of board, lab, pawn/queen/bishop/knight battles, checkmate finale, title screen, mouse move flow). Scripted 73-ply game (every attacker type, castling, capture-promotion) ran with no console errors and piece views always matching domain pieces.
+- L7: Problems found and fixed during visual checks: competing camera tweens (newer flight now cancels older), OrbitControls clamping distance during cinematics (controls bypassed while disabled), 32 per-piece point lights dropping to ~12 fps (pooled 2 lights → 60 fps), bishop tongue missing its target (now aimed), excessive bloom.
+- L8: Known gaps / next steps: sounds are synthesized but were not listened to; rook "siege" and king "vortex" only verified as error-free, not frame-inspected; commits exceed the ~400-line slice heuristic because the run was unattended (single-pr strategy); RDD is still disabled for this clone (`gentle-ai review mode enable --scope clone` to re-enable); no push/PR made.
