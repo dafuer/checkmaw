@@ -41,7 +41,7 @@ export function createMaterials(color: Color): PieceMaterials {
       side: THREE.DoubleSide,
     }),
     tooth: new THREE.MeshStandardMaterial({ color: 0xf5f0e1, roughness: 0.35, metalness: 0.05 }),
-    eye: new THREE.MeshBasicMaterial({ color: new THREE.Color(TEAM_GLOW[color]).multiplyScalar(4) }),
+    eye: new THREE.MeshBasicMaterial({ color: new THREE.Color(TEAM_GLOW[color]).multiplyScalar(2.5) }),
     carapace: new THREE.MeshStandardMaterial({
       color: white ? 0x9c8f7a : 0x221c2c,
       roughness: 0.35,

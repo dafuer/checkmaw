@@ -60,7 +60,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.63,
     height: 0.81,
-    traits: { legs: 4, legLength: 0.72, lift: 0.37, teeth: 9, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 0, tongue: 0.4, gape: 1.0, name: 'Gnasher' },
+    traits: { legs: 4, legLength: 0.72, lift: 0.37, teeth: 9, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 0, tongue: 0.4, gape: 1.35, name: 'Gnasher' },
   },
   r: {
     profile: [

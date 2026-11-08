@@ -62,12 +62,15 @@ export class PieceView {
   private readonly tentacles: Chain[] = [];
   private readonly horns: THREE.Group[] = [];
   private tongue: Chain | null = null;
-  private readonly gulletLight: THREE.PointLight;
+  /** Borrowed from a shared pool only while fighting (lights are costly per shader). */
+  private gulletLight: THREE.PointLight | null = null;
   private readonly mouthRadius: number;
 
   monster = 0;
   mouth = 0;
   tongueOut = 0;
+  /** Tongue length multiplier needed to reach the aimed target. */
+  private tongueReach = 1;
   tentacleReach = 0;
   /** 0..1 walking gait blend. */
   gait = 0;
@@ -107,9 +110,6 @@ export class PieceView {
     if (this.traits.horns > 0) this.buildHorns();
     if (this.traits.tongue > 0) this.buildTongue();
 
-    this.gulletLight = new THREE.PointLight(this.mats.flesh.emissive.getHex(), 0, 1.4, 2);
-    this.gulletLight.position.set(0, this.mouthY + 0.05, 0.05);
-    this.body.add(this.gulletLight);
 
     shadowed(this.root);
     this.root.userData.pieceId = id;
@@ -131,6 +131,31 @@ export class PieceView {
   /** World position of the mouth centre. */
   mouthWorld(target = new THREE.Vector3()): THREE.Vector3 {
     return this.body.localToWorld(target.set(0, this.mouthY + 0.05, this.mouthRadius * 0.6));
+  }
+
+  /** Points the tongue at a world position and sets how far it must stretch. */
+  aimTongue(world: THREE.Vector3): void {
+    if (!this.tongue) return;
+    const root = this.tongue.root;
+    const local = this.lower.worldToLocal(world.clone()).sub(root.position);
+    root.rotation.order = 'YXZ';
+    root.rotation.y = Math.atan2(local.x, local.z);
+    root.rotation.x = Math.atan2(-local.y, Math.hypot(local.x, local.z));
+    this.tongueReach = Math.max(0.3, local.length() / this.traits.tongue);
+  }
+
+  /** Attaches a pooled light inside the mouth; pass null to give it back. */
+  borrowLight(light: THREE.PointLight | null): void {
+    if (this.gulletLight && this.gulletLight !== light) {
+      this.gulletLight.intensity = 0;
+      this.gulletLight.removeFromParent();
+    }
+    this.gulletLight = light;
+    if (light) {
+      light.color.copy(this.mats.flesh.emissive);
+      light.position.set(0, this.mouthY + 0.05, 0.05);
+      this.body.add(light);
+    }
   }
 
   setGlow(intensity: number): void {
@@ -176,7 +201,7 @@ export class PieceView {
 
     this.mats.body.emissiveIntensity = Math.max(this.mats.body.emissiveIntensity * 0.9, m * 0.02);
     this.mats.flesh.emissiveIntensity = 0.5 + this.mouth * 0.9;
-    this.gulletLight.intensity = m * this.mouth * 0.9;
+    if (this.gulletLight) this.gulletLight.intensity = m * this.mouth * 0.35;
 
     this.updateLegs(lift);
     this.updateChains(t);
@@ -518,7 +543,7 @@ export class PieceView {
     if (this.tongue) {
       const out = this.tongueOut;
       this.tongue.root.visible = m > 0.05 && (out > 0.01 || this.mouth > 0.2);
-      this.tongue.root.scale.set(1, 1, Math.max(0.0001, 0.25 + out * 1.4));
+      this.tongue.root.scale.set(1, 1, Math.max(0.0001, 0.25 + out * (this.tongueReach - 0.25)));
       this.tongue.joints.forEach((j, i) => {
         if (i === 0) return;
         j.rotation.x = Math.sin(t * 9 + i * 0.8) * 0.15 * (1 - out * 0.6) - 0.04 * out;

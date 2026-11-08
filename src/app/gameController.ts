@@ -66,15 +66,15 @@ export class GameController {
     if (on && !this.busy) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 1.2);
   }
 
-  restart(): void {
+  restart(fen?: string): void {
     if (this.busy) return;
-    this.game = new ChessGame();
+    this.game = new ChessGame(fen);
     this.selected = null;
     this.lastMove = [];
     this.hud.hideOverlay();
     this.view.sync(this.game.pieces());
     this.refresh();
-    if (this.autoCamera) void this.stage.flyTo(SIDE_POSE.w, 1.2);
+    if (this.autoCamera) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 1.2);
   }
 
   undo(): void {

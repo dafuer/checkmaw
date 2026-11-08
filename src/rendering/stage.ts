@@ -29,7 +29,7 @@ export class Stage {
 
   constructor(container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -136,7 +136,10 @@ export class Stage {
     const dt = Math.min(this.clock.getDelta(), 1 / 20);
     this.animator.update(dt);
     for (const listener of this.frameListeners) listener(dt * this.animator.speed);
-    this.controls.update();
+    // OrbitControls clamps the camera distance even when disabled, which would
+    // fight scripted cinematics; while disabled we only aim the camera.
+    if (this.controls.enabled) this.controls.update();
+    else this.camera.lookAt(this.controls.target);
 
     if (this.shake > 0.001) {
       const s = this.shake * 0.12;

@@ -36,12 +36,18 @@ function angleLerp(a: number, b: number, t: number): number {
  * whole battle reads top-to-bottom and respects the animator speed.
  */
 export class BattleDirector {
+  /** Fixed pool so the number of lights (and thus shader programs) never changes. */
+  private readonly lights: [THREE.PointLight, THREE.PointLight];
+
   constructor(
     private readonly stage: Stage,
     private readonly particles: Particles,
     private readonly sfx: Sfx,
     private readonly hooks: BattleHooks,
-  ) {}
+  ) {
+    this.lights = [new THREE.PointLight(0xff5a1a, 0, 1.6, 2), new THREE.PointLight(0xff5a1a, 0, 1.6, 2)];
+    for (const l of this.lights) stage.scene.add(l);
+  }
 
   private get anim() {
     return this.stage.animator;
@@ -50,6 +56,8 @@ export class BattleDirector {
   async battle(attacker: PieceView, victim: PieceView, destination: THREE.Vector3): Promise<void> {
     const style = STYLE_BY_TYPE[attacker.type];
     const savedPose = this.stage.pose();
+    attacker.borrowLight(this.lights[0]);
+    victim.borrowLight(this.lights[1]);
     this.stage.controls.enabled = false;
     this.hooks.letterbox(true);
 
@@ -58,6 +66,7 @@ export class BattleDirector {
     const dir = V.clone().sub(A).setY(0).normalize();
 
     await Promise.all([this.frameFight(A, V, savedPose.position, 1.1), this.faceEachOther(attacker, victim, 0.5)]);
+    const stopTracking = this.track(attacker, victim);
 
     this.hooks.caption(`${PIECE_NAMES[attacker.type]} becomes ${attacker.traits.name}`);
     await this.transform(attacker, true);
@@ -93,11 +102,21 @@ export class BattleDirector {
       if (style === 'pounce') await this.leap(attacker, destination, 0.7);
       else await this.walk(attacker, destination, 2.4);
     }
+    stopTracking();
     const back = this.stage.flyTo(savedPose, 1.0);
     await Promise.all([this.transform(attacker, false), this.turn(attacker, attacker.restFacing, 0.6)]);
     await back;
+    this.returnLights(attacker, victim);
     this.hooks.letterbox(false);
     this.stage.controls.enabled = true;
+  }
+
+  private returnLights(...pieces: PieceView[]): void {
+    for (const p of pieces) p.borrowLight(null);
+    for (const l of this.lights) {
+      l.intensity = 0;
+      this.stage.scene.add(l);
+    }
   }
 
   /** Short version used when cinematics are disabled. */
@@ -120,10 +139,32 @@ export class BattleDirector {
     let side = new THREE.Vector3(-d.z, 0, d.x);
     // Stay on the same side of the fight as the current camera.
     if (side.dot(current.clone().sub(mid)) < 0) side = side.negate();
-    const dist = Math.max(2.1, len * 0.75 + 1.3);
-    const position = mid.clone().addScaledVector(side, dist).add(new THREE.Vector3(0, 0.95 + len * 0.12, 0)).addScaledVector(d, -0.25);
-    const target = mid.clone().add(new THREE.Vector3(0, 0.6, 0));
+    // High three-quarter view: close enough to read the monsters, high enough
+    // that bystander pieces in the foreground do not hide the fight.
+    const dist = Math.max(2.5, len * 0.6 + 1.8);
+    const position = mid.clone().addScaledVector(side, dist).add(new THREE.Vector3(0, 1.7 + len * 0.2, 0)).addScaledVector(d, -0.3);
+    const target = mid.clone().add(new THREE.Vector3(0, 0.75, 0));
     await this.stage.flyTo({ position, target }, duration);
+  }
+
+  /** Smoothly follows both fighters so walks, leaps and lifts stay in frame. */
+  private track(attacker: PieceView, victim: PieceView): () => void {
+    const cam = this.stage.camera.position;
+    const target = this.stage.controls.target;
+    const dir = cam.clone().sub(target).normalize();
+    const tmp = new THREE.Vector3();
+    return this.anim.every((dt) => {
+      const a = attacker.root.position;
+      const v = victim.root.visible ? victim.root.position : a;
+      const top = Math.max(attacker.body.position.y + attacker.height * 0.6, v.y + 0.4);
+      tmp.set((a.x + v.x) / 2, Math.max(0.6, top * 0.75), (a.z + v.z) / 2);
+      const separation = Math.hypot(a.x - v.x, a.z - v.z);
+      const dist = 2.6 + separation * 0.55 + top * 0.6;
+      const k = 1 - Math.exp(-dt * 2.5);
+      target.lerp(tmp, k);
+      cam.lerp(tmp.clone().addScaledVector(dir, dist), k);
+      return false;
+    });
   }
 
   private async faceEachOther(a: PieceView, b: PieceView, duration: number): Promise<void> {
@@ -163,7 +204,7 @@ export class BattleDirector {
     await this.anim.tween(0.55, (t) => {
       piece.body.rotation.z = Math.sin(t * 60) * 0.06 * t;
       piece.body.rotation.x = Math.cos(t * 47) * 0.04 * t;
-      piece.setGlow(t * 1.6);
+      piece.setGlow(t * 0.9);
     }, ease.inQuad);
     piece.body.rotation.set(0, 0, 0);
 
@@ -364,6 +405,7 @@ export class BattleDirector {
     this.sfx.magic();
     await this.anim.tween(0.25, (t) => (attacker.mouth = 0.4 + t * 0.6), ease.outBack);
     this.sfx.whoosh();
+    attacker.aimTongue(victim.root.position.clone().setY(victim.height * 0.6));
     await this.anim.tween(0.25, (t) => (attacker.tongueOut = t), ease.outCubic);
     this.particles.sparksAt(victim.root.position.clone().setY(0.6), { count: 40, color: 0xff3a6a, speed: 2.5, life: 0.6 });
     this.sfx.chomp();

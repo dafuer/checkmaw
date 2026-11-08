@@ -15,7 +15,7 @@ const MARKER_STYLE: Record<MarkerKind, { color: number; opacity: number; shape: 
 };
 
 interface Brazier {
-  light: THREE.PointLight;
+  light: THREE.PointLight | null;
   flame: THREE.Mesh;
   base: number;
   phase: number;
@@ -41,8 +41,8 @@ export class Board {
         roughnessMap: tex.roughness,
         roughness: 1,
         metalness: 0,
-        clearcoat: 0.8,
-        clearcoatRoughness: 0.18,
+        clearcoat: 0.55,
+        clearcoatRoughness: 0.32,
       }),
     );
     top.rotation.x = -Math.PI / 2;
@@ -156,7 +156,7 @@ export class Board {
     this.time += dt;
     for (const b of this.braziers) {
       const flicker = Math.sin(this.time * 9 + b.phase) * 0.25 + Math.sin(this.time * 23 + b.phase * 2) * 0.15 + (Math.random() - 0.5) * 0.2;
-      b.light.intensity = b.base * (1 + flicker * 0.5);
+      if (b.light) b.light.intensity = b.base * (1 + flicker * 0.5);
       b.flame.scale.set(1 + flicker * 0.15, 1 + flicker * 0.4, 1 + flicker * 0.15);
       b.flame.rotation.y += dt * 2;
     }
@@ -205,12 +205,17 @@ export class Board {
       bowl.rotation.x = Math.PI;
       const flame = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.3, 10, 1, true), flameMat);
       flame.position.y = 5.1;
-      const light = new THREE.PointLight(0xff6a2a, 18, 16, 1.8);
-      light.position.y = 5.4;
-      pillar.add(shaft, cap, bowl, flame, light);
+      pillar.add(shaft, cap, bowl, flame);
       pillar.position.set(Math.cos(a) * r, -2.05, Math.sin(a) * r);
       this.group.add(pillar);
-      this.braziers.push({ light, flame, base: 18, phase: i * 1.7 });
+      // Only every other brazier carries a real light: each light costs on every material.
+      let light: THREE.PointLight | null = null;
+      if (i % 2 === 0) {
+        light = new THREE.PointLight(0xff6a2a, 30, 20, 1.6);
+        light.position.y = 5.4;
+        pillar.add(light);
+      }
+      this.braziers.push({ light, flame, base: 30, phase: i * 1.7 });
     }
   }
 
