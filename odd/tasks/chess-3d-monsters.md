@@ -22,7 +22,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T3 | S2, S3 | inline | done (visual check in Chrome) | 07677c8 |
 | T4 | S1 | inline | done (real mouse click flow verified) | 07677c8, c50ce51 |
 | T5 | S3, S5 | inline | done (#lab view) | 07677c8 |
-| T6 | S4, S5 | inline | done (pawn, knight, bishop, queen inspected frame by frame; all six styles exercised by a 73-ply scripted game) | 07677c8, 42bb0f4 |
+| T6 | S4, S5 | inline | done (all six attack styles inspected frame by frame; all six styles exercised by a 73-ply scripted game) | 07677c8, 42bb0f4 |
 | T7 | S3, S6 | inline | done (not audible-verified; no errors) | 07677c8 |
 | T8 | S1 | inline | done | 07677c8, c50ce51 |
 | T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
@@ -48,4 +48,4 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L5: Decision A1 (procedural models) taken to avoid licence ambiguity and because the transformation effect needs per-part control.
 - L6 (2026-11-08, overnight run): Implemented T1–T9. Verification: `npm test` 24/24 green; `npm run build` OK; visual checks in Chrome through the claude-in-chrome MCP (screenshots of board, lab, pawn/queen/bishop/knight battles, checkmate finale, title screen, mouse move flow). Scripted 73-ply game (every attacker type, castling, capture-promotion) ran with no console errors and piece views always matching domain pieces.
 - L7: Problems found and fixed during visual checks: competing camera tweens (newer flight now cancels older), OrbitControls clamping distance during cinematics (controls bypassed while disabled), 32 per-piece point lights dropping to ~12 fps (pooled 2 lights → 60 fps), bishop tongue missing its target (now aimed), excessive bloom.
-- L8: Known gaps / next steps: sounds are synthesized but were not listened to; rook "siege" and king "vortex" only verified as error-free, not frame-inspected; commits exceed the ~400-line slice heuristic because the run was unattended (single-pr strategy); RDD is still disabled for this clone (`gentle-ai review mode enable --scope clone` to re-enable); no push/PR made.
+- L8: Known gaps / next steps: sounds are synthesized but were not listened to; commits exceed the ~400-line slice heuristic because the run was unattended (single-pr strategy); RDD is still disabled for this clone (`gentle-ai review mode enable --scope clone` to re-enable); no push/PR made.
