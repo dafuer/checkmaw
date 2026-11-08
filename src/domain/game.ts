@@ -51,6 +51,11 @@ export class ChessGame {
     return this.board.get(square);
   }
 
+  /** Moves played so far in SAN, oldest first. */
+  sanHistory(): string[] {
+    return this.chess.history();
+  }
+
   isCheck(): boolean {
     return this.chess.isCheck();
   }

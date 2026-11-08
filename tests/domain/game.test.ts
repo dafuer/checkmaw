@@ -119,6 +119,14 @@ describe('ChessGame', () => {
     expect(game.turn()).toBe('w');
   });
 
+  it('records the SAN history and trims it on undo', () => {
+    const game = new ChessGame();
+    play(game, [['e2', 'e4'], ['e7', 'e5']]);
+    expect(game.sanHistory()).toEqual(['e4', 'e5']);
+    game.undo();
+    expect(game.sanHistory()).toEqual(['e4']);
+  });
+
   it('returns false when there is nothing to undo', () => {
     expect(new ChessGame().undo()).toBe(false);
   });
