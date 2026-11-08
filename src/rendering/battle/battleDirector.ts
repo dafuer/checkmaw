@@ -111,12 +111,39 @@ export class BattleDirector {
     this.stage.controls.enabled = true;
   }
 
-  private returnLights(...pieces: PieceView[]): void {
+  /** Takes the pooled lights back from any pieces holding them. */
+  returnLights(...pieces: PieceView[]): void {
     for (const p of pieces) p.borrowLight(null);
     for (const l of this.lights) {
       l.intensity = 0;
       this.stage.scene.add(l);
     }
+  }
+
+  /** Checkmate finale: the winning king turns into its monster and roars while the loser topples. */
+  async celebrate(winner: PieceView, loser: PieceView | undefined): Promise<void> {
+    this.stage.controls.enabled = false;
+    const w = winner.root.position;
+    // Look at the king from the board side, high enough to clear the other pieces.
+    const toCam = new THREE.Vector3(-w.x, 0, -w.z).normalize();
+    if (toCam.lengthSq() < 0.01) toCam.set(0, 0, winner.color === 'w' ? 1 : -1);
+    const position = w.clone().addScaledVector(toCam, 4.2).add(new THREE.Vector3(0, 3.4, 0));
+    await this.stage.flyTo({ position, target: w.clone().add(new THREE.Vector3(0, 1, 0)) }, 1.4);
+    winner.borrowLight(this.lights[0]);
+    await this.turn(winner, winner.faceTowards(position.x, position.z), 0.4);
+    if (loser) {
+      const fall = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+      this.sfx.crack();
+      void this.anim.tween(0.9, (t) => {
+        loser.root.rotation.x = fall.z * t * (Math.PI / 2);
+        loser.root.rotation.z = -fall.x * t * (Math.PI / 2);
+      }, ease.outBounce).then(() => {
+        this.particles.shatter(loser.root.position, loser.mats.body.color, 30, 1.6, 0.3);
+        this.stage.addShake(0.4);
+      });
+    }
+    await this.transform(winner, true);
+    this.stage.controls.enabled = true;
   }
 
   /** Short version used when cinematics are disabled. */

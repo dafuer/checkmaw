@@ -129,6 +129,7 @@ html, body {
   z-index: 10;
 }
 .overlay.hidden { display: none; }
+.overlay.end { align-items: flex-end; padding-bottom: 9vh; background: linear-gradient(transparent 55%, rgba(0, 0, 0, 0.7)); }
 .card {
   background: var(--panel);
   border: 1px solid var(--gold);
@@ -152,6 +153,11 @@ html, body {
   cursor: pointer;
 }
 .promo-btn:hover { border-color: var(--gold); box-shadow: 0 0 18px rgba(214, 166, 74, 0.5); }
+
+.intro-mode .overlay { background: radial-gradient(ellipse at center, rgba(0,0,0,0.15), rgba(0,0,0,0.7)); }
+.intro-mode .panel, .intro-mode .hint { opacity: 0; pointer-events: none; }
+.card.intro { max-width: 460px; }
+.card.intro h2.big { font-size: 46px; letter-spacing: 0.3em; text-shadow: 0 0 24px rgba(214, 166, 74, 0.7); }
 
 @keyframes pulse { from { opacity: 0.55; } to { opacity: 1; } }
 

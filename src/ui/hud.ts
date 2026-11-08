@@ -79,10 +79,10 @@ export class Hud {
     container.append(this.root);
   }
 
-  setTurn(color: Color, inCheck: boolean): void {
+  setTurn(color: Color, inCheck: boolean, result: GameResult | null = null): void {
     this.turn.textContent = `${color === 'w' ? 'White' : 'Black'} to move`;
     this.turn.dataset.color = color;
-    this.status.textContent = inCheck ? 'CHECK!' : '';
+    this.status.textContent = result ? REASONS[result.reason].toUpperCase() : inCheck ? 'CHECK!' : '';
     this.status.classList.toggle('alert', inCheck);
   }
 
@@ -146,10 +146,31 @@ export class Hud {
     });
     card.append(again);
     this.overlay.append(card);
+    this.overlay.classList.add('end');
     this.overlay.classList.remove('hidden');
+  }
+
+  showIntro(onStart: () => void): void {
+    this.overlay.replaceChildren();
+    const card = el('div', 'card intro');
+    card.append(
+      el('h2', 'big', 'MONSTER CHESS'),
+      el('p', '', 'Two players, one board. Every capture awakens the monster inside the piece.'),
+    );
+    const start = el('button', 'btn primary', 'Begin the hunt');
+    start.addEventListener('click', () => {
+      this.overlay.classList.add('hidden');
+      this.root.classList.remove('intro-mode');
+      onStart();
+    });
+    card.append(start);
+    this.overlay.append(card);
+    this.overlay.classList.remove('hidden');
+    this.root.classList.add('intro-mode');
   }
 
   hideOverlay(): void {
     this.overlay.classList.add('hidden');
+    this.overlay.classList.remove('end');
   }
 }

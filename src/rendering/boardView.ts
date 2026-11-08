@@ -47,6 +47,7 @@ export class BoardView {
 
   /** Instantly mirrors the domain state (initial load, undo, restart). */
   sync(pieces: Piece[]): void {
+    this.director.returnLights(...this.views.values());
     const alive = new Set(pieces.map((p) => p.id));
     for (const [id, view] of this.views) {
       if (!alive.has(id)) this.remove(id, view);
@@ -66,6 +67,9 @@ export class BoardView {
       view.monster = 0;
       view.mouth = 0;
       view.hop = 0;
+      view.tongueOut = 0;
+      view.tentacleReach = 0;
+      view.body.rotation.set(0, 0, 0);
     }
   }
 
@@ -92,6 +96,15 @@ export class BoardView {
         await this.promote(e.pieceId, e.to);
       }
     }
+  }
+
+  /** Plays the checkmate finale for the given winner colour. */
+  async celebrate(winnerColor: 'w' | 'b'): Promise<void> {
+    if (!this.cinematics) return;
+    const kings = [...this.views.values()].filter((v) => v.type === 'k');
+    const winner = kings.find((k) => k.color === winnerColor);
+    const loser = kings.find((k) => k.color !== winnerColor);
+    if (winner) await this.director.celebrate(winner, loser);
   }
 
   private async move(id: string, to: Square): Promise<void> {

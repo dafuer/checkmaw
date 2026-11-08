@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ChessGame } from '../domain/game';
-import type { Color, GameEvent, Square } from '../domain/types';
+import type { Color, GameEvent, GameResult, Square } from '../domain/types';
 import type { Sfx } from '../audio/sfx';
 import type { Board } from '../rendering/board';
 import type { BoardView } from '../rendering/boardView';
@@ -8,8 +8,8 @@ import type { CameraPose, Stage } from '../rendering/stage';
 import type { Hud } from '../ui/hud';
 
 const SIDE_POSE: Record<Color, CameraPose> = {
-  w: { position: new THREE.Vector3(0, 9.5, 10.5), target: new THREE.Vector3(0, 0, 0.4) },
-  b: { position: new THREE.Vector3(0, 9.5, -10.5), target: new THREE.Vector3(0, 0, -0.4) },
+  w: { position: new THREE.Vector3(0, 11.2, 8.4), target: new THREE.Vector3(0, 0, 0.5) },
+  b: { position: new THREE.Vector3(0, 11.2, -8.4), target: new THREE.Vector3(0, 0, -0.5) },
 };
 
 /**
@@ -179,18 +179,28 @@ export class GameController {
   private react(events: GameEvent[]): void {
     const over = events.find((e) => e.kind === 'gameOver');
     if (over && over.kind === 'gameOver') {
-      this.sfx.fanfare(over.result.winner !== null);
-      this.hud.showGameOver(over.result, () => this.restart());
+      void this.finish(over.result);
       return;
     }
     if (events.some((e) => e.kind === 'check')) this.sfx.check();
     if (this.autoCamera) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 1.3);
   }
 
+  private async finish(result: GameResult): Promise<void> {
+    this.busy = true;
+    try {
+      if (result.winner) await this.view.celebrate(result.winner);
+    } finally {
+      this.busy = false;
+    }
+    this.sfx.fanfare(result.winner !== null);
+    this.hud.showGameOver(result, () => this.restart());
+  }
+
   private refresh(): void {
     const turn = this.game.turn();
     const inCheck = this.game.isCheck();
-    this.hud.setTurn(turn, inCheck);
+    this.hud.setTurn(turn, inCheck, this.game.status());
     this.hud.setCaptured(this.game.captured());
     this.hud.setMoves(this.game.sanHistory());
     this.board.setMarkers('last', this.lastMove);

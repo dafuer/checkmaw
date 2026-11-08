@@ -45,7 +45,7 @@ export class Stage {
     this.scene.environmentIntensity = 0.35;
 
     this.camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 200);
-    this.camera.position.set(0, 9.5, 10.5);
+    this.camera.position.set(0, 11.2, 8.4);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.target.set(0, 0, 0);

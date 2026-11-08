@@ -30,6 +30,23 @@ controller = new GameController(stage, board, view, hud, sfx);
 controller.start();
 stage.start();
 
+// Title screen: the camera circles the arena until the players begin.
+if (!location.hash.startsWith('#lab') && !location.search.includes('skipIntro')) {
+  stage.controls.enabled = false;
+  const stopOrbit = stage.animator.every((_dt, time) => {
+    const a = time * 0.12;
+    stage.camera.position.set(Math.sin(a) * 13, 6.5, Math.cos(a) * 13);
+    stage.controls.target.set(0, 0, 0);
+    return false;
+  });
+  hud.showIntro(() => {
+    sfx.unlock();
+    stopOrbit();
+    stage.controls.enabled = true;
+    controller?.setAutoCamera(true);
+  });
+}
+
 // Debug lab: `#lab` shows every monster form up close, `#lab-closed` the pieces.
 if (location.hash.startsWith('#lab')) void import('./debug/lab').then((m) => m.openLab(stage, view, location.hash === '#lab'));
 
