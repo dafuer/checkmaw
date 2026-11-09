@@ -33,7 +33,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
 | T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | d3fbcae |
 | T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests; 90-ply random game clean) | 375e94b |
-| T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | pending |
+| T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | f3331e4 |
 | T14 | S12 | inline | pending user choice (candidates searched) | |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
