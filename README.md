@@ -88,6 +88,8 @@ reacts to those events, so rules and visuals can evolve independently.
 - `http://localhost:5173/#lab-closed` — the same pieces in their normal form.
 - `window.chess.controller.restart('<FEN>')` in the console loads any position.
 - `window.chess.stage.animator.speed = 0.2` slows every animation down.
+- `chess.soundCheck()` renders every procedural sound offline and prints its peak,
+  RMS and length (used to balance the per-sound levels in `src/audio/sfx.ts`).
 
 ## Swapping in real 3D models later
 

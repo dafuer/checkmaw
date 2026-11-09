@@ -52,4 +52,14 @@ if (!location.hash.startsWith('#lab') && !location.search.includes('skipIntro'))
 if (location.hash.startsWith('#lab')) void import('./debug/lab').then((m) => m.openLab(stage, view, location.hash === '#lab'));
 
 // Exposed for debugging and automated visual checks.
-(window as unknown as { chess: unknown }).chess = { controller, stage, view };
+/** Prints peak, RMS and length of every procedural sound, rendered offline. */
+async function soundCheck(): Promise<void> {
+  const rows: Record<string, { peak: string; rmsDb: string; seconds: string }> = {};
+  for (const name of Sfx.sounds) {
+    const m = await Sfx.measure(name);
+    rows[name] = { peak: m.peak.toFixed(2), rmsDb: m.rmsDb.toFixed(0), seconds: m.seconds.toFixed(2) };
+  }
+  console.table(rows);
+}
+
+(window as unknown as { chess: unknown }).chess = { controller, stage, view, soundCheck };
