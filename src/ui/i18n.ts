@@ -103,7 +103,7 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     form: {
       p: 'Gnasher',
       n: 'the Night Rider',
-      b: 'the Grave Paladin',
+      b: 'the Tin Soldier',
       r: 'the Tower Brute',
       q: 'the Radiant Lady',
       k: 'the Sovereign',
@@ -158,7 +158,7 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     form: {
       p: 'Roedientes',
       n: 'el Jinete Nocturno',
-      b: 'el Paladín Sepulcral',
+      b: 'el Soldadito de Plomo',
       r: 'el Bruto de la Torre',
       q: 'la Dama Radiante',
       k: 'el Soberano',

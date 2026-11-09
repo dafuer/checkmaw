@@ -39,6 +39,8 @@ export interface MonsterTraits {
   bulk?: number;
   /** Walks on two jointed beast legs instead of spider legs. */
   biped?: boolean;
+  /** Size of the two beast legs (1 = the rook brute's). */
+  legSize?: number;
 }
 
 export interface PieceShape {
@@ -65,7 +67,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.63,
     height: 0.81,
-    traits: { legs: 4, legLength: 0.72, lift: 0.37, teeth: 9, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 0, tongue: 0.4, gape: 1.35 },
+    traits: { legs: 2, legLength: 0.72, lift: 0.3, teeth: 9, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 0, tongue: 0.4, gape: 1.35, biped: true, legSize: 0.8 },
   },
   r: {
     profile: [

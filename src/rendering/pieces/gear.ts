@@ -44,7 +44,7 @@ export const WEAPON_ARM: PoseTable = {
   lift: { s: -2.9, e: -0.3, w: 0 },
 };
 
-const SHIELD_ARM: PoseTable = {
+export const SHIELD_ARM: PoseTable = {
   rest: { s: -0.4, e: -1.0, w: 0 },
   guard: { s: -1.25, e: -0.35, w: 0 },
   raise: { s: -0.9, e: -0.8, w: 0 },
@@ -91,18 +91,13 @@ export interface GearSpec {
 
 /**
  * Arms for the monster forms. The knight fights mounted (see mount.ts); the
- * queen and king become human figures with their own arms (see figure.ts).
+ * bishop, queen and king become figures with their own arms (see figure.ts).
  */
 const GEAR: Partial<Record<PieceType, GearSpec>> = {
   p: {
     shoulderY: 0.49, shoulderX: 0.2, upper: 0.15, fore: 0.14, thickness: 0.026, splay: 0.3,
     right: { table: WEAPON_ARM, item: 'shortsword' },
     left: { table: SHIELD_ARM, item: 'buckler' },
-  },
-  b: {
-    shoulderY: 0.64, shoulderX: 0.22, upper: 0.2, fore: 0.19, thickness: 0.03, splay: 0.3,
-    right: { table: WEAPON_ARM, item: 'greatsword' },
-    left: { table: SHIELD_ARM, item: 'kite' },
   },
   r: {
     shoulderY: 0.6, shoulderX: 0.27, upper: 0.3, fore: 0.3, thickness: 0.065, splay: 0.4,

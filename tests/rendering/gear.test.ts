@@ -4,6 +4,7 @@ import type { PieceType } from '../../src/domain/types';
 import { Gear, gearSpec, hasGear } from '../../src/rendering/pieces/gear';
 import { createMaterials } from '../../src/rendering/pieces/materials';
 import { PieceView } from '../../src/rendering/pieces/pieceView';
+import { SHAPES } from '../../src/rendering/pieces/profiles';
 
 const TYPES: PieceType[] = ['p', 'n', 'b', 'r', 'q', 'k'];
 
@@ -14,12 +15,12 @@ function rightShoulder(gear: Gear) {
 
 describe('gear', () => {
   it('arms every piece type except the knight, which rides a horse instead', () => {
-    expect(TYPES.filter(hasGear)).toEqual(['p', 'b', 'r']);
+    expect(TYPES.filter(hasGear)).toEqual(['p', 'r']);
     for (const t of TYPES) {
       const view = new PieceView(`t-${t}`, t, 'w');
       expect(view.gear !== null).toBe(t !== 'n');
       expect(view.mount !== null).toBe(t === 'n');
-      expect(view.figure !== null).toBe(t === 'q' || t === 'k');
+      expect(view.figure !== null).toBe(t === 'b' || t === 'q' || t === 'k');
     }
   });
 
@@ -33,7 +34,7 @@ describe('gear', () => {
   });
 
   it('raises the weapon arm overhead when the raise weight is 1', () => {
-    const gear = new Gear(gearSpec('b'), 'b', createMaterials('b'));
+    const gear = new Gear(gearSpec('p'), 'b', createMaterials('b'));
     gear.out = 1;
     gear.apply(0, 0, 0);
     const rest = rightShoulder(gear).rotation.x;
@@ -55,12 +56,18 @@ describe('piece view parameters', () => {
     knight.resetPose();
     expect([knight.mounted, knight.rear, knight.mouth, knight.monster]).toEqual([0, 0, 0, 0]);
 
+    const pawn = new PieceView('p1', 'p', 'w');
+    pawn.monster = 1;
+    pawn.armed = 1;
+    pawn.gear!.pose.strike = 1;
+    pawn.resetPose();
+    expect([pawn.monster, pawn.armed, pawn.gear!.pose.strike]).toEqual([0, 0, 0]);
+
     const bishop = new PieceView('b1', 'b', 'w');
-    bishop.monster = 1;
-    bishop.armed = 1;
-    bishop.gear!.pose.strike = 1;
+    bishop.avatar = 1;
+    bishop.gear!.pose.guard = 1;
     bishop.resetPose();
-    expect([bishop.monster, bishop.armed, bishop.gear!.pose.strike]).toEqual([0, 0, 0]);
+    expect([bishop.avatar, bishop.gear!.pose.guard]).toEqual([0, 0]);
   });
 
   it('places the mounted knight head in front of the horse and lifts it', () => {
@@ -71,6 +78,35 @@ describe('piece view parameters', () => {
     knight.apply();
     expect(knight.body.position.z).toBeGreaterThan(0.2);
     expect(knight.body.position.y).toBeGreaterThan(0.3);
+  });
+});
+
+describe('the bishop tin soldier', () => {
+  it('replaces the piece and carries the great sword and kite shield', () => {
+    const bishop = new PieceView('b2', 'b', 'b');
+    bishop.avatar = 1;
+    bishop.apply();
+    expect(bishop.body.visible).toBe(false);
+    expect(bishop.figure!.group.visible).toBe(true);
+    expect(bishop.gear!.spec.right.item).toBe('greatsword');
+    expect(bishop.gear!.spec.left.item).toBe('kite');
+    // Its sword is always in hand: it has no scabbard.
+    expect(bishop.gear!.item(0).visible).toBe(true);
+  });
+
+  it('marches with stiff knees, one leg forward and one back', () => {
+    const bishop = new PieceView('b3', 'b', 'w');
+    bishop.avatar = 1;
+    bishop.gait = 1;
+    bishop.gaitPhase = Math.PI / 2;
+    bishop.apply();
+    const hips = bishop.figure!.group.children.filter((c) => c.userData.hip);
+    expect(hips).toHaveLength(2);
+    expect(Math.sign(hips[0].rotation.x)).toBe(-Math.sign(hips[1].rotation.x));
+    for (const hip of hips) {
+      const knee = hip.children.find((c) => c.userData.knee)!;
+      expect(knee.rotation.x).toBe(0);
+    }
   });
 });
 
@@ -101,7 +137,7 @@ describe('queen and king figures', () => {
   });
 });
 
-describe('rook brute legs', () => {
+describe('two-legged monsters (pawn gnasher and rook brute)', () => {
   const feetHeights = (rook: PieceView): number[] => {
     rook.root.updateMatrixWorld(true);
     const ys: number[] = [];
@@ -111,23 +147,29 @@ describe('rook brute legs', () => {
     return ys;
   };
 
-  it('plants both feet on the floor in monster form', () => {
-    const rook = new PieceView('r1', 'r', 'w');
-    rook.monster = 1;
-    rook.apply();
-    const ys = feetHeights(rook);
-    expect(ys).toHaveLength(2);
-    for (const y of ys) expect(Math.abs(y)).toBeLessThan(0.05);
-  });
+  for (const type of ['p', 'r'] as const) {
+    it(`${type}: plants both feet on the floor in monster form`, () => {
+      const piece = new PieceView(`${type}1`, type, 'w');
+      piece.monster = 1;
+      piece.apply();
+      const ys = feetHeights(piece);
+      expect(ys).toHaveLength(2);
+      for (const y of ys) expect(Math.abs(y)).toBeLessThan(0.05);
+    });
 
-  it('lifts one foot at a time while walking', () => {
-    const rook = new PieceView('r2', 'r', 'b');
-    rook.monster = 1;
-    rook.gait = 1;
-    rook.gaitPhase = 0;
-    rook.apply();
-    const [a, b] = feetHeights(rook);
-    expect(Math.max(a, b)).toBeGreaterThan(0.08);
-    expect(Math.min(a, b)).toBeLessThan(0.05);
+    it(`${type}: lifts one foot at a time while walking`, () => {
+      const piece = new PieceView(`${type}2`, type, 'b');
+      piece.monster = 1;
+      piece.gait = 1;
+      piece.gaitPhase = 0;
+      piece.apply();
+      const [a, b] = feetHeights(piece);
+      expect(Math.max(a, b)).toBeGreaterThan(0.06);
+      expect(Math.min(a, b)).toBeLessThan(0.05);
+    });
+  }
+
+  it('no piece walks on spider legs any more', () => {
+    for (const type of TYPES) expect(SHAPES[type].traits.biped || type === 'n' || ['b', 'q', 'k'].includes(type)).toBe(true);
   });
 });

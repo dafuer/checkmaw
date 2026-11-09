@@ -1,13 +1,18 @@
 import * as THREE from 'three';
 import type { Color } from '../../domain/types';
-import { CASTER_HAND, Gear, type GearSpec, type PoseTable } from './gear';
+import { CASTER_HAND, Gear, SHIELD_ARM, WEAPON_ARM, type GearSpec, type PoseTable } from './gear';
 import { TEAM_GLOW, type PieceMaterials } from './materials';
 import type { Point } from './profiles';
 
-export type FigureType = 'q' | 'k';
+export type FigureType = 'b' | 'q' | 'k';
+
+export function isFigureType(type: string): type is FigureType {
+  return type === 'b' || type === 'q' || type === 'k';
+}
 
 /** Figures stand a little taller than the pieces so the royals look majestic. */
-const FIGURE_SCALE = 1.2;
+const FIGURE_SCALE: Record<FigureType, number> = { b: 1.15, q: 1.2, k: 1.2 };
+const FIGURE_HEIGHT: Record<FigureType, number> = { b: 1.42, q: 1.45, k: 1.5 };
 
 /** The queen holds her great staff upright and points or raises it to cast. */
 const STAFF_ARM: PoseTable = {
@@ -44,6 +49,22 @@ const QUEEN_ARMS: GearSpec = {
   left: { table: CASTER_HAND, item: 'none' },
 };
 
+/** At rest the soldier shoulders arms: hand low at his side, blade upright beside him. */
+const SHOULDER_ARMS: PoseTable = { ...WEAPON_ARM, rest: { s: 0.05, e: -0.55, w: -2.45 } };
+
+/** The tin soldier: great sword in the right hand, kite shield on the left arm. */
+const SOLDIER_ARMS: GearSpec = {
+  shoulderY: 0.98, shoulderX: 0.16, upper: 0.18, fore: 0.17, thickness: 0.03, splay: 0.3,
+  right: { table: SHOULDER_ARMS, item: 'greatsword' },
+  left: { table: SHIELD_ARM, item: 'kite' },
+};
+
+/** Painted-tin colours per side: coat, trousers and plume. */
+const UNIFORM: Record<Color, { coat: number; trousers: number; plume: number }> = {
+  w: { coat: 0xc41e2a, trousers: 0xf3efe4, plume: 0xffffff },
+  b: { coat: 0x1d2c6e, trousers: 0x17161d, plume: 0xc41e2a },
+};
+
 const KING_ARMS: GearSpec = {
   shoulderY: 1.11, shoulderX: 0.16, upper: 0.2, fore: 0.19, thickness: 0.03, splay: 0.3,
   right: { table: SWORD_ARM, item: 'longsword' },
@@ -55,7 +76,9 @@ function lathe(points: Point[], segments = 32): THREE.LatheGeometry {
 }
 
 /**
- * The queen and king do not become spiders: they come alive as people.
+ * The bishop, queen and king do not become spiders: they come alive as people.
+ * The bishop is a wind-up tin soldier with a shako, a painted coat, a great
+ * sword and a kite shield, marching stiff-legged with its key turning.
  * The queen is a radiant lady in a gown with a tiara, flowing hair and a great
  * staff; the king is a lord with crown, cape and a sword at his belt that he
  * draws only to fight. Both are carved from the piece's own ivory or obsidian.
@@ -75,23 +98,35 @@ export class Figure {
   private capeRest: Float32Array | null = null;
   private skirt: THREE.Group | null = null;
   private sheathed: THREE.Group | null = null;
+  /** The tin soldier's wind-up key, turning on its back. */
+  private key: THREE.Group | null = null;
+  /** Extra turns of the key while it is being wound (radians per second). */
+  winding = 0;
+  /** Stiff legs swing from the hip without bending the knee. */
+  private stiff = false;
 
   constructor(readonly type: FigureType, color: Color, private readonly mats: PieceMaterials) {
-    this.gear = new Gear(type === 'q' ? QUEEN_ARMS : KING_ARMS, color, mats);
+    this.gear = new Gear(type === 'q' ? QUEEN_ARMS : type === 'k' ? KING_ARMS : SOLDIER_ARMS, color, mats);
     this.group.add(this.gear.group);
     if (type === 'q') this.buildQueen(color);
-    else this.buildKing(color);
+    else if (type === 'k') this.buildKing(color);
+    else this.buildSoldier(color);
   }
 
   get height(): number {
-    return (this.type === 'q' ? 1.45 : 1.5) * FIGURE_SCALE;
+    return FIGURE_HEIGHT[this.type] * FIGURE_SCALE[this.type];
+  }
+
+  /** Only the king carries his sword sheathed and draws it to fight. */
+  get sheathable(): boolean {
+    return this.sheathed !== null;
   }
 
   apply(time: number, gait: number, gaitPhase: number, hop = 0): void {
     const a = this.amount;
     this.group.visible = a > 0.01;
     // Rise out of the piece: grow from a squashed glow into full height.
-    const k = FIGURE_SCALE;
+    const k = FIGURE_SCALE[this.type];
     this.group.scale.set(Math.max(0.0001, a * k), Math.max(0.0001, a * a * k), Math.max(0.0001, a * k));
     // The arms are part of the figure, which already scales as a whole.
     this.gear.out = a > 0.01 ? 1 : 0;
@@ -105,12 +140,16 @@ export class Figure {
     }
 
     for (let i = 0; i < this.legs.length; i++) {
-      const swing = Math.sin(gaitPhase + i * Math.PI) * 0.55 * gait;
+      const swing = Math.sin(gaitPhase + i * Math.PI) * (this.stiff ? 0.5 : 0.55) * gait;
       this.legs[i].rotation.x = swing;
       const knee = this.legs[i].children.find((c) => c.userData.knee) as THREE.Group | undefined;
-      if (knee) knee.rotation.x = Math.max(0, -Math.sin(gaitPhase + i * Math.PI + 0.6)) * 0.7 * gait;
+      if (knee) knee.rotation.x = this.stiff ? 0 : Math.max(0, -Math.sin(gaitPhase + i * Math.PI + 0.6)) * 0.7 * gait;
     }
-    this.group.position.y = hop + (this.legs.length ? Math.abs(Math.sin(gaitPhase)) * 0.025 * gait : 0);
+    // Stiff legs lift the whole toy as they swing past each other.
+    const bob = this.stiff ? (1 - Math.cos(Math.sin(gaitPhase) * 0.5 * gait)) * 0.3 : Math.abs(Math.sin(gaitPhase)) * 0.025 * gait;
+    this.group.position.y = hop + (this.legs.length ? bob : 0);
+    if (this.stiff) this.group.rotation.z = Math.sin(gaitPhase) * 0.05 * gait;
+    if (this.key) this.key.rotation.y = time * (1.2 + gait * 2 + this.winding);
 
     if (this.skirt) {
       // The gown sways as she glides.
@@ -165,18 +204,18 @@ export class Figure {
     return m;
   }
 
-  private head(y: number, r: number, color: Color): THREE.Group {
+  private head(y: number, r: number, color: Color, skin: THREE.Material = this.mats.body, eyes?: THREE.Material): THREE.Group {
     const head = new THREE.Group();
     head.position.y = y;
-    head.add(new THREE.Mesh(new THREE.SphereGeometry(r, 20, 16), this.mats.body));
-    const eyeMat = this.glow(color, 2.2);
+    head.add(new THREE.Mesh(new THREE.SphereGeometry(r, 20, 16), skin));
+    const eyeMat = eyes ?? this.glow(color, 2.2);
     for (const side of [-1, 1]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(r * 0.13, 8, 6), eyeMat);
       eye.scale.set(1.3, 0.6, 0.6);
       eye.position.set(side * r * 0.36, r * 0.12, r * 0.9);
       head.add(eye);
     }
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.38, r * 0.45, r * 1.2, 12), this.mats.body);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.38, r * 0.45, r * 1.2, 12), skin);
     neck.position.y = -r * 1.05;
     head.add(neck);
     this.group.add(head);
@@ -264,6 +303,134 @@ export class Figure {
     }
   }
 
+  private buildSoldier(color: Color): void {
+    const uniform = UNIFORM[color];
+    // Painted tin: glossy, a little metallic.
+    const paint = (c: number) => this.material({ color: c, roughness: 0.32, metalness: 0.45 });
+    const coat = paint(uniform.coat);
+    const trousers = paint(uniform.trousers);
+    const black = paint(0x101014);
+    const white = paint(0xf6f3ea);
+    const gold = this.material({ color: 0xe0b040, roughness: 0.25, metalness: 0.9 });
+    const skin = paint(0xf0c4a0);
+    this.stiff = true;
+
+    // Stand: the little base every toy soldier is cast on.
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.27, 0.04, 28), this.mats.body);
+    stand.position.y = 0.02;
+    this.group.add(stand);
+
+    // Straight legs with a side stripe and tall black boots.
+    const legGeo = new THREE.CylinderGeometry(0.042, 0.038, 0.5, 10);
+    legGeo.translate(0, -0.25, 0);
+    for (const side of [-1, 1]) {
+      const hip = new THREE.Group();
+      hip.position.set(side * 0.07, 0.56, 0);
+      hip.userData.hip = true;
+      hip.add(new THREE.Mesh(legGeo, trousers));
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.32, 0.012), coat);
+      stripe.position.set(side * 0.042, -0.2, 0);
+      hip.add(stripe);
+      const knee = new THREE.Group();
+      knee.position.y = -0.3;
+      knee.userData.knee = true;
+      const boot = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.22, 10), black);
+      boot.position.y = -0.11;
+      const toe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.05, 0.14), black);
+      toe.position.set(0, -0.2, 0.03);
+      knee.add(boot, toe);
+      hip.add(knee);
+      this.group.add(hip);
+      this.legs.push(hip);
+    }
+
+    // Coat with tails, white cross belts and a row of gold buttons.
+    const jacket = new THREE.Mesh(lathe([[0, 0.5], [0.13, 0.5], [0.135, 0.6], [0.125, 0.7], [0.14, 0.85], [0.15, 0.97], [0.12, 1.03], [0.05, 1.06], [0, 1.06]]), coat);
+    const tails = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.02), coat);
+    tails.position.set(0, 0.46, -0.12);
+    tails.rotation.x = 0.15;
+    const belt = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.016, 8, 32), white);
+    belt.rotation.x = Math.PI / 2;
+    belt.position.y = 0.62;
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.035, 0.015), gold);
+    buckle.position.set(0, 0.62, 0.14);
+    this.group.add(jacket, tails, belt, buckle);
+    for (const side of [-1, 1]) {
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.42, 0.012), white);
+      strap.position.set(0, 0.82, 0.135);
+      strap.rotation.z = side * 0.62;
+      this.group.add(strap);
+      // Gold epaulettes with a fringe.
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.02, 14), gold);
+      pad.position.set(side * 0.15, 1.0, 0);
+      const fringe = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.04, 14, 1, true), gold);
+      fringe.position.set(side * 0.15, 0.975, 0);
+      this.group.add(pad, fringe);
+    }
+    for (let i = 0; i < 4; i++) {
+      const button = new THREE.Mesh(new THREE.SphereGeometry(0.011, 8, 6), gold);
+      const y = 0.68 + i * 0.08;
+      button.position.set(0, y, 0.128 + (y > 0.85 ? 0.012 : 0));
+      this.group.add(button);
+    }
+    // High collar.
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.05, 16), coat);
+    collar.position.y = 1.07;
+    this.group.add(collar);
+
+    // Head: rosy cheeks, dot eyes, a black moustache and a tall shako.
+    const head = this.head(1.17, 0.085, color, skin, black);
+    for (const side of [-1, 1]) {
+      const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), paint(0xe2606a));
+      cheek.position.set(side * 0.05, -0.01, 0.065);
+      cheek.scale.set(1, 0.7, 0.4);
+      const tash = new THREE.Mesh(new THREE.CapsuleGeometry(0.01, 0.04, 3, 6), black);
+      tash.rotation.z = Math.PI / 2 + side * 0.35;
+      tash.position.set(side * 0.022, -0.035, 0.08);
+      head.add(cheek, tash);
+    }
+    const shako = new THREE.Group();
+    shako.position.y = 0.05;
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.085, 0.2, 20), black);
+    drum.position.y = 0.1;
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.087, 0.087, 0.025, 20), gold);
+    band.position.y = 0.015;
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.103, 0.1, 0.02, 20), gold);
+    top.position.y = 0.2;
+    const plate = new THREE.Mesh(new THREE.CircleGeometry(0.035, 6), gold);
+    plate.position.set(0, 0.09, 0.094);
+    plate.rotation.x = -0.08;
+    const visor = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.095, 0.01, 20, 1, false, -Math.PI / 2, Math.PI), black);
+    visor.position.set(0, 0.0, 0.025);
+    visor.rotation.x = 0.25;
+    const plume = new THREE.Mesh(new THREE.CapsuleGeometry(0.03, 0.08, 4, 10), paint(uniform.plume));
+    plume.position.y = 0.27;
+    const strap = new THREE.Mesh(new THREE.TorusGeometry(0.083, 0.006, 6, 24, Math.PI), gold);
+    strap.rotation.set(0, Math.PI / 2, Math.PI);
+    strap.position.y = 0.0;
+    shako.add(drum, band, top, plate, visor, plume, strap);
+    head.add(shako);
+
+    // Wind-up key in its back.
+    this.key = new THREE.Group();
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.09, 8), gold);
+    shaft.position.y = 0.045;
+    const bow = new THREE.Group();
+    bow.position.y = 0.1;
+    for (const side of [-1, 1]) {
+      const loop = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.01, 8, 18), gold);
+      loop.position.x = side * 0.04;
+      bow.add(loop);
+    }
+    this.key.add(shaft, bow);
+    // The key turns around its shaft, which points backward out of the coat.
+    const pivot = new THREE.Group();
+    pivot.position.set(0, 0.85, -0.12);
+    pivot.rotation.x = -Math.PI / 2;
+    pivot.add(this.key);
+    this.group.add(pivot);
+  }
+
   private buildKing(color: Color): void {
     const white = color === 'w';
     // Legs with boots.
@@ -274,6 +441,7 @@ export class Figure {
     for (const side of [-1, 1]) {
       const hip = new THREE.Group();
       hip.position.set(side * 0.075, 0.6, 0);
+      hip.userData.hip = true;
       hip.add(new THREE.Mesh(thighGeo, this.mats.carapace));
       const knee = new THREE.Group();
       knee.position.y = -0.29;

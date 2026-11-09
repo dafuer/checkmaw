@@ -230,7 +230,21 @@ export class BattleDirector {
 
     if (piece.figure) {
       await this.moves.comeAlive(piece, 0.8);
-      if (piece.type === 'q') {
+      if (piece.type === 'b') {
+        // The tin soldier is wound up, clicks its heels and presents its sword.
+        piece.figure.winding = 14;
+        for (let i = 0; i < 4; i++) {
+          this.sfx.select();
+          await this.anim.wait(0.12);
+        }
+        piece.figure.winding = 0;
+        this.sfx.clang();
+        await this.anim.tween(0.18, (t) => (piece.hop = Math.sin(t * Math.PI) * 0.08), ease.outQuad);
+        piece.hop = 0;
+        await this.moves.pose(piece, { raise: 0.55, guard: 0.6 }, 0.35, ease.outBack);
+        await this.anim.wait(0.25);
+        await this.moves.restPose(piece, 0.3);
+      } else if (piece.type === 'q') {
         // She lifts her staff and the crystal flares.
         await this.moves.pose(piece, { raise: 0.85 }, 0.45, ease.outBack);
         this.sfx.magic();

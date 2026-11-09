@@ -1,8 +1,8 @@
 # Checkmaw
 
 Two-player chess in the browser where every capture becomes a short monster fight:
-the attacking piece cracks open, grows spider legs, teeth and glowing eyes, and
-devours its victim in a cinematic sequence.
+the attacking piece comes alive — a toothy monster, a mounted rider, a wind-up
+tin soldier, a lady or a lord — and finishes its victim in a cinematic sequence.
 
 Everything is generated in code — the pieces, the monsters, the textures and the
 sound effects — so the project uses **no external art or audio assets** and no
@@ -48,15 +48,15 @@ means adding one dictionary there (a test checks every key is translated).
 
 ## The monsters
 
-Every capture is a short duel. Pawns, knights, bishops and rooks turn into
-monsters; the queen and king come alive as a lady and a lord instead. Each
-type has its own weapon and finishing move:
+Every capture is a short duel. Pawns and rooks turn into two-legged monsters,
+the knight mounts a war horse, and the bishop, queen and king come alive as a
+tin soldier, a lady and a lord. Each type has its own weapon and finishing move:
 
 | Piece | Monster | Arsenal | Finishing move |
 |-------|---------|---------|----------------|
-| Pawn | Gnasher | Short sword and buckler | Two stabs, a rising slash that tosses the victim into its jaws |
+| Pawn | Gnasher | A waddling little biter on two clawed legs, short sword and buckler | Two stabs, a rising slash that tosses the victim into its jaws |
 | Knight | Night Mare | War horse, armoured rider, lance | Backs off, charges, impales the victim and flings it into the air |
-| Bishop | Grave Paladin | Glowing great sword and kite shield | Charges the blade and cleaves the victim in two |
+| Bishop | Tin Soldier | A wind-up toy soldier in shako and painted coat, great sword and kite shield | Is wound up, clicks its heels, charges the blade and cleaves the victim in two |
 | Rook | Tower Brute | Huge fists, stomping legs | Grabs the victim, lifts it overhead, slams it flat and eats the pancake |
 | Queen | The Radiant Lady | A dazzling lady in a gown and tiara with a great crystal staff | Three bolts from the staff, then a pillar of light turns the victim to crystal and a tap of the staff shatters it |
 | King | The Sovereign | A lord with crown, cape and a sword at his belt | Draws only to attack: cuts straight through the victim, sheathes the sword, and the victim falls in two |
@@ -67,8 +67,8 @@ blow with their shields.
 Ordinary moves are animated too (the **Walks** toggle): the knight mounts its
 horse and gallops along the L, the rook stomps across as a giant brute that
 shakes the board, the queen glides in her gown leaving a trail of light, the
-king strides with his cape flowing and his sword sheathed, and the other
-pieces march with their weapons.
+king strides with his cape flowing and his sword sheathed, the tin soldier
+marches stiff-legged with its key turning, and the pawn gnasher waddles.
 
 ## Architecture
 

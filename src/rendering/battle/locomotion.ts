@@ -16,11 +16,12 @@ export function angleLerp(a: number, b: number, t: number): number {
 const DUST = 0xb59a7a;
 
 /** How strongly each monster type transforms just to walk across the board. */
-const MARCH_LEVEL: Record<string, number> = { p: 0.8, b: 0.85, r: 1 };
+const MARCH_LEVEL: Record<string, number> = { p: 0.8, r: 1 };
 
 /**
- * How pieces get around: walking (spider legs), stomping (the rook brute),
- * floating (the queen), galloping (the mounted knight) and leaping. Also owns
+ * How pieces get around: waddling (the pawn gnasher), stomping (the rook
+ * brute), marching (the tin soldier), striding (the king), gliding (the
+ * queen), galloping (the mounted knight) and leaping. Also owns
  * the light "march" transformation used for ordinary, non-capturing moves.
  */
 export class Locomotion {
@@ -63,10 +64,13 @@ export class Locomotion {
     await this.turn(piece, piece.faceTowards(to.x, to.z), 0.25);
     const heavy = piece.type === 'r';
     const floating = piece.airborne;
-    // The lady glides in her gown; the lord walks with long strides.
+    // The lady glides in her gown, the lord walks with long strides, the tin
+    // soldier marches stiff-legged and the pawn gnasher waddles.
     const gliding = piece.avatar > 0.5 && piece.type === 'q';
     const striding = piece.avatar > 0.5 && piece.type === 'k';
-    const stride = heavy ? 7 : striding ? 8 : 11;
+    const marching = piece.avatar > 0.5 && piece.type === 'b';
+    const waddling = piece.type === 'p' && piece.monster > 0.3;
+    const stride = heavy ? 7 : striding ? 8 : marching ? 9 : waddling ? 13 : 11;
     let lastStep = 0;
     const glow = TEAM_GLOW[piece.color];
     await this.anim.tween(dist / (heavy ? speed * 0.7 : speed), (t) => {
@@ -82,11 +86,15 @@ export class Locomotion {
         this.particles.sparksAt(piece.root.position.clone().setY(0.05 + Math.random() * 0.4), { count: 2, color: TEAM_GLOW[piece.color], speed: 0.3, life: 0.8, gravity: -0.4 });
       }
       if (heavy) piece.body.rotation.z = Math.sin(piece.gaitPhase) * 0.12 * piece.gait;
+      if (waddling) {
+        piece.body.rotation.z = Math.sin(piece.gaitPhase) * 0.2 * piece.gait;
+        piece.hop = Math.abs(Math.sin(piece.gaitPhase)) * 0.05 * piece.gait;
+      }
       if (piece.gaitPhase - lastStep > Math.PI) {
         lastStep = piece.gaitPhase;
         if (gliding) {
           this.sfx.shimmer();
-        } else if (striding) {
+        } else if (striding || marching || waddling) {
           this.sfx.step();
         } else if (heavy) {
           this.sfx.stomp();
@@ -99,6 +107,7 @@ export class Locomotion {
     }, heavy ? ease.linear : ease.inOutQuad);
     piece.gait = 0;
     piece.body.rotation.z = 0;
+    if (waddling) piece.hop = 0;
     piece.root.position.y = 0;
   }
 
@@ -162,7 +171,7 @@ export class Locomotion {
     await this.anim.tween(duration, (t) => (piece.mounted = t), ease.outBack);
   }
 
-  /** The queen or king rises out of the piece as a living lady or lord. */
+  /** The bishop, queen or king rises out of the piece as a tin soldier, a lady or a lord. */
   async comeAlive(piece: PieceView, duration = 0.5): Promise<void> {
     const glow = TEAM_GLOW[piece.color];
     const at = piece.root.position.clone().setY(0.7);
@@ -174,7 +183,7 @@ export class Locomotion {
 
   /** The king draws the sword from his belt. */
   async drawSword(piece: PieceView): Promise<void> {
-    if (!piece.figure) return;
+    if (!piece.figure?.sheathable) return;
     this.sfx.unsheathe();
     piece.figure.drawn = 1;
     this.particles.sparksAt(piece.weaponTip(), { count: 30, color: 0xfff1c0, speed: 1.6, life: 0.4 });
@@ -183,7 +192,7 @@ export class Locomotion {
 
   /** And puts it back. */
   async sheatheSword(piece: PieceView): Promise<void> {
-    if (!piece.figure) return;
+    if (!piece.figure?.sheathable) return;
     await this.restPose(piece, 0.45);
     piece.figure.drawn = 0;
     this.sfx.sheathe();
@@ -253,7 +262,7 @@ export class Locomotion {
       await this.anim.tween(0.35, (t) => (piece.rear = Math.sin(t * Math.PI) * 0.6), ease.outQuad);
     } else {
       if (piece.type === 'b') await this.pose(piece, { guard: 1 }, 0.15);
-      const speed = piece.type === 'q' ? 1.5 : piece.type === 'k' ? 1.35 : 1.7;
+      const speed = piece.type === 'q' ? 1.5 : piece.type === 'k' || piece.type === 'b' ? 1.35 : 1.7;
       await this.walk(piece, to, speed);
     }
     await this.slumber(piece, 0.35);

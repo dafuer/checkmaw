@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Color, PieceType } from '../../domain/types';
-import { Figure } from './figure';
+import { Figure, isFigureType } from './figure';
 import { Gear, gearSpec, hasGear } from './gear';
 import { createMaterials, TEAM_GLOW, type PieceMaterials } from './materials';
 import { Mount, REAR_PIVOT_Z } from './mount';
@@ -84,7 +84,7 @@ export class PieceView {
   private readonly mouthRadius: number;
   /** Arms and weapons: the monster's (pawn, bishop, rook) or the figure's (queen, king). */
   readonly gear: Gear | null = null;
-  /** The queen and king come alive as a lady and a lord instead of monsters. */
+  /** The bishop, queen and king come alive as a tin soldier, a lady and a lord instead of monsters. */
   readonly figure: Figure | null = null;
   /** The knight's horse and rider. */
   readonly mount: Mount | null = null;
@@ -107,7 +107,7 @@ export class PieceView {
     if (this.gear) this.gear.out = v;
   }
 
-  /** 0..1 queen or king transformed into a living figure. */
+  /** 0..1 bishop, queen or king transformed into a living figure. */
   get avatar(): number {
     return this.figure?.amount ?? 0;
   }
@@ -168,7 +168,7 @@ export class PieceView {
       this.gear = new Gear(gearSpec(type), color, this.mats);
       this.lower.add(this.gear.group);
     }
-    if (type === 'q' || type === 'k') {
+    if (isFigureType(type)) {
       this.figure = new Figure(type, color, this.mats);
       this.gear = this.figure.gear;
       this.rig.add(this.figure.group);
@@ -329,7 +329,10 @@ export class PieceView {
     this.armed = 0;
     this.mounted = 0;
     this.avatar = 0;
-    if (this.figure) this.figure.drawn = 0;
+    if (this.figure) {
+      this.figure.drawn = 0;
+      this.figure.winding = 0;
+    }
     this.rear = 0;
     if (this.mount) {
       this.mount.gallop = 0;
@@ -672,11 +675,13 @@ export class PieceView {
   /** Two-bone IK in the forward/up plane: the foot is planted below the hip and strides with the gait. */
   private updateBipedLegs(lift: number): void {
     const m = this.monster;
-    const s = Math.max(0.0001, m);
+    const k = this.traits.legSize ?? 1;
+    const s = Math.max(0.0001, m) * k;
     const sy = this.body.scale.y;
     for (const leg of this.bipedLegs) {
       leg.hip.scale.setScalar(s);
       leg.hip.visible = m > 0.01;
+      leg.hip.position.x = leg.side * 0.27 * Math.sqrt(k);
       const phase = this.gaitPhase + (leg.side > 0 ? Math.PI : 0);
       // Foot target in hip space (local units, before the leg's own scale).
       const reach = BIPED_THIGH + BIPED_SHIN;
