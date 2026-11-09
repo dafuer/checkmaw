@@ -1,3 +1,5 @@
+import { CalmMusic } from './music';
+
 /**
  * Procedural sound effects built with the Web Audio API: no audio files, so no
  * licensing concerns. The context is created lazily on the first user gesture.
@@ -15,11 +17,17 @@ const LEVELS = {
 
 export type SoundName = keyof typeof LEVELS;
 
+/** Background sound: the arena's dark drone or the meadow's calm music. */
+export type Mood = 'arena' | 'meadow';
+
 export class Sfx {
   private ctx: BaseAudioContext | null = null;
   private master: GainNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
   private droneStarted = false;
+  private droneGain: GainNode | null = null;
+  private music: CalmMusic | null = null;
+  private mood: Mood = 'arena';
   /** Gain node of the sound being built (see play()); null means straight to master. */
   private bus: AudioNode | null = null;
   muted = false;
@@ -33,6 +41,7 @@ export class Sfx {
     if (!Ctor) return;
     this.attach(new Ctor());
     this.startDrone();
+    this.setMood(this.mood);
   }
 
   /**
@@ -74,6 +83,20 @@ export class Sfx {
     this.noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
     const data = this.noiseBuffer.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  }
+
+  /** Crossfades the background between the arena drone and the meadow music. */
+  setMood(mood: Mood): void {
+    this.mood = mood;
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    this.droneGain?.gain.setTargetAtTime(mood === 'arena' ? 0.05 : 0, ctx.currentTime, 0.8);
+    if (mood === 'meadow') {
+      this.music ??= new CalmMusic(ctx, this.master);
+      this.music.start();
+    } else {
+      this.music?.stop();
+    }
   }
 
   setMuted(muted: boolean): void {
@@ -332,6 +355,7 @@ export class Sfx {
     this.droneStarted = true;
     const g = ctx.createGain();
     g.gain.value = 0.05;
+    this.droneGain = g;
     const f = ctx.createBiquadFilter();
     f.type = 'lowpass';
     f.frequency.value = 400;

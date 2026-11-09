@@ -7,6 +7,7 @@ import { Hud } from './ui/hud';
 import { I18n } from './ui/i18n';
 import { readPref, writePref } from './ui/prefs';
 import { readCameraMode } from './rendering/cameraModes';
+import { readScene, Scenery } from './rendering/scenery';
 
 const container = document.getElementById('app')!;
 const stage = new Stage(container);
@@ -17,13 +18,21 @@ stage.onFrame((dt) => board.update(dt));
 
 let controller: GameController | null = null;
 const i18n = new I18n();
-const settings = { camera: readCameraMode(readPref('camera')) };
+const settings = { camera: readCameraMode(readPref('camera')), scene: readScene(readPref('scene')) };
+const scenery = new Scenery(stage, board);
+scenery.set(settings.scene);
+sfx.setMood(settings.scene);
 const hud = new Hud(container, {
   onUndo: () => controller?.undo(),
   onRestart: () => controller?.restart(),
   onToggleCinematics: (on) => (view.cinematics = on),
   onToggleMarches: (on) => (view.marches = on),
   onToggleSound: (on) => sfx.setMuted(!on),
+  onScene: (scene) => {
+    writePref('scene', scene);
+    scenery.set(scene);
+    sfx.setMood(scene);
+  },
   onCameraMode: (mode) => {
     writePref('camera', mode);
     controller?.setCameraMode(mode);
@@ -71,4 +80,4 @@ async function soundCheck(): Promise<void> {
   console.table(rows);
 }
 
-(window as unknown as { chess: unknown }).chess = { controller, stage, view, i18n, soundCheck };
+(window as unknown as { chess: unknown }).chess = { controller, stage, view, i18n, scenery, sfx, soundCheck };

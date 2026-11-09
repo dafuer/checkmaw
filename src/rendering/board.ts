@@ -24,6 +24,8 @@ interface Brazier {
 /** The board, its frame and the surrounding ritual arena. */
 export class Board {
   readonly group = new THREE.Group();
+  /** The dark ritual arena around the board (plinth, rune floor, braziers, embers); hidden in other scenes. */
+  readonly arena = new THREE.Group();
   private readonly pickPlane: THREE.Mesh;
   private readonly markers = new Map<MarkerKind, THREE.Mesh[]>();
   private readonly markerGeo: Record<'disc' | 'ring' | 'tile', THREE.BufferGeometry>;
@@ -73,7 +75,7 @@ export class Board {
     plinth.rotation.y = Math.PI / 8;
     plinth.position.y = -1.26;
     plinth.receiveShadow = true;
-    this.group.add(plinth);
+    this.arena.add(plinth);
 
     // Arena floor with the glowing rune circle.
     const floorTex = stoneTexture(11, '#0f0c13', '#3a3142');
@@ -85,7 +87,7 @@ export class Board {
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -2.05;
     floor.receiveShadow = true;
-    this.group.add(floor);
+    this.arena.add(floor);
 
     this.runeMaterial = new THREE.MeshStandardMaterial({
       color: 0x000000,
@@ -99,11 +101,12 @@ export class Board {
     const runes = new THREE.Mesh(new THREE.PlaneGeometry(22, 22), this.runeMaterial);
     runes.rotation.x = -Math.PI / 2;
     runes.position.y = -2.03;
-    this.group.add(runes);
+    this.arena.add(runes);
 
     this.buildPillars();
     this.embers = this.buildEmbers();
-    this.group.add(this.embers);
+    this.arena.add(this.embers);
+    this.group.add(this.arena);
 
     this.markerGeo = {
       disc: new THREE.CircleGeometry(0.16, 32),
@@ -154,6 +157,16 @@ export class Board {
 
   update(dt: number): void {
     this.time += dt;
+    // Pulse each marker group softly.
+    const pulse = 0.85 + Math.sin(this.time * 5) * 0.15;
+    for (const [kind, pool] of this.markers) {
+      const base = MARKER_STYLE[kind].opacity;
+      for (const m of pool) (m.material as THREE.MeshBasicMaterial).opacity = base * (kind === 'last' ? 1 : pulse);
+    }
+    if (this.arena.visible) this.updateArena(dt);
+  }
+
+  private updateArena(dt: number): void {
     for (const b of this.braziers) {
       const flicker = Math.sin(this.time * 9 + b.phase) * 0.25 + Math.sin(this.time * 23 + b.phase * 2) * 0.15 + (Math.random() - 0.5) * 0.2;
       if (b.light) b.light.intensity = b.base * (1 + flicker * 0.5);
@@ -161,13 +174,6 @@ export class Board {
       b.flame.rotation.y += dt * 2;
     }
     this.runeMaterial.emissiveIntensity = 1.2 + Math.sin(this.time * 1.3) * 0.4;
-
-    // Pulse each marker group softly.
-    const pulse = 0.85 + Math.sin(this.time * 5) * 0.15;
-    for (const [kind, pool] of this.markers) {
-      const base = MARKER_STYLE[kind].opacity;
-      for (const m of pool) (m.material as THREE.MeshBasicMaterial).opacity = base * (kind === 'last' ? 1 : pulse);
-    }
 
     const pos = this.embers.geometry.attributes.position as THREE.BufferAttribute;
     const speeds = this.embers.userData.speeds as Float32Array;
@@ -207,7 +213,7 @@ export class Board {
       flame.position.y = 5.1;
       pillar.add(shaft, cap, bowl, flame);
       pillar.position.set(Math.cos(a) * r, -2.05, Math.sin(a) * r);
-      this.group.add(pillar);
+      this.arena.add(pillar);
       // Only every other brazier carries a real light: each light costs on every material.
       let light: THREE.PointLight | null = null;
       if (i % 2 === 0) {

@@ -1,5 +1,6 @@
 import type { Color, GameResult, PieceType } from '../domain/types';
 import type { CameraMode } from '../rendering/cameraModes';
+import type { SceneName } from '../rendering/scenery';
 
 export type Lang = 'en' | 'es';
 
@@ -28,6 +29,9 @@ interface Dictionary {
   camera: string;
   cameraTitle: string;
   cameraModes: Record<CameraMode, string>;
+  scene: string;
+  sceneTitle: string;
+  scenes: Record<SceneName, string>;
   sound: string;
   soundTitle: string;
   on: string;
@@ -81,6 +85,9 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     camera: 'Camera',
     cameraTitle: 'Change the camera view (C)',
     cameraModes: { auto: 'auto', free: 'free', top: 'top', side: 'side', corner: 'corner', orbit: 'orbit' },
+    scene: 'Scene',
+    sceneTitle: 'Dark arena or sunny mountain meadow with calm music',
+    scenes: { arena: 'arena', meadow: 'meadow' },
     sound: 'Sound',
     soundTitle: 'Procedural sound effects',
     on: 'on',
@@ -136,6 +143,9 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     camera: 'Cámara',
     cameraTitle: 'Cambiar la vista de la cámara (C)',
     cameraModes: { auto: 'auto', free: 'libre', top: 'cenital', side: 'lateral', corner: 'esquina', orbit: 'órbita' },
+    scene: 'Escenario',
+    sceneTitle: 'Arena oscura o pradera de montaña soleada con música tranquila',
+    scenes: { arena: 'arena', meadow: 'pradera' },
     sound: 'Sonido',
     soundTitle: 'Efectos de sonido procedurales',
     on: 'sí',

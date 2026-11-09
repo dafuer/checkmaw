@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Animator, ease, lerp } from './animation/animator';
+import type { Look } from './scenery';
 
 export interface CameraPose {
   position: THREE.Vector3;
@@ -20,6 +21,8 @@ export class Stage {
   readonly controls: OrbitControls;
   readonly animator = new Animator();
   readonly keyLight: THREE.DirectionalLight;
+  private readonly hemiLight: THREE.HemisphereLight;
+  private readonly rimLight: THREE.DirectionalLight;
   private readonly composer: EffectComposer;
   private readonly bloom: UnrealBloomPass;
   private readonly clock = new THREE.Clock();
@@ -57,7 +60,8 @@ export class Stage {
     this.controls.maxPolarAngle = Math.PI * 0.46;
     this.controls.enablePan = false;
 
-    this.scene.add(new THREE.HemisphereLight(0x8a7cff, 0x1a0c08, 0.35));
+    this.hemiLight = new THREE.HemisphereLight(0x8a7cff, 0x1a0c08, 0.35);
+    this.scene.add(this.hemiLight);
 
     this.keyLight = new THREE.DirectionalLight(0xffe2c4, 2.1);
     this.keyLight.position.set(6, 14, 7);
@@ -71,9 +75,9 @@ export class Stage {
     this.keyLight.shadow.normalBias = 0.02;
     this.scene.add(this.keyLight);
 
-    const rim = new THREE.DirectionalLight(0x6a5cff, 1.4);
-    rim.position.set(-8, 6, -9);
-    this.scene.add(rim);
+    this.rimLight = new THREE.DirectionalLight(0x6a5cff, 1.4);
+    this.rimLight.position.set(-8, 6, -9);
+    this.scene.add(this.rimLight);
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
@@ -91,6 +95,22 @@ export class Stage {
   onFrame(listener: (dt: number) => void): () => void {
     this.frameListeners.add(listener);
     return () => this.frameListeners.delete(listener);
+  }
+
+  /** Background, fog, lights, exposure and bloom of a scene (see scenery.ts). */
+  applyLook(look: Look): void {
+    this.scene.background = look.background;
+    this.scene.fog = look.fog;
+    this.scene.environmentIntensity = look.environment;
+    this.renderer.toneMappingExposure = look.exposure;
+    this.hemiLight.color.setHex(look.hemisphere.sky);
+    this.hemiLight.groundColor.setHex(look.hemisphere.ground);
+    this.hemiLight.intensity = look.hemisphere.intensity;
+    this.keyLight.color.setHex(look.key.color);
+    this.keyLight.intensity = look.key.intensity;
+    this.rimLight.color.setHex(look.rim.color);
+    this.rimLight.intensity = look.rim.intensity;
+    this.bloom.strength = look.bloom;
   }
 
   setBloom(strength: number): void {

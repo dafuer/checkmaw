@@ -1,5 +1,6 @@
 import type { Color, GameResult, Piece, PieceType, PromotionType } from '../domain/types';
 import { CAMERA_MODES, type CameraMode } from '../rendering/cameraModes';
+import { SCENES, type SceneName } from '../rendering/scenery';
 import { APP_NAME, type I18n } from './i18n';
 
 const GLYPHS: Record<string, string> = {
@@ -14,6 +15,7 @@ export interface HudActions {
   onToggleMarches(on: boolean): void;
   onToggleSound(on: boolean): void;
   onCameraMode(mode: CameraMode): void;
+  onScene(scene: SceneName): void;
 }
 
 /** What the review bar and the move list call while a finished game is reviewed. */
@@ -26,6 +28,7 @@ export interface ReviewActions {
 /** Choices the HUD starts with (restored from the player's last session). */
 export interface HudSettings {
   camera: CameraMode;
+  scene: SceneName;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -118,6 +121,7 @@ export class Hud {
         });
       }
     };
+    cycle(SCENES, settings.scene, (s) => `${this.i18n.t.scene}: ${this.i18n.t.scenes[s]}`, () => this.i18n.t.sceneTitle, actions.onScene);
     cycle(CAMERA_MODES, settings.camera, (m) => `${this.i18n.t.camera}: ${this.i18n.t.cameraModes[m]}`, () => this.i18n.t.cameraTitle, actions.onCameraMode, 'c');
     toggle(() => this.i18n.t.sound, () => this.i18n.t.soundTitle, actions.onToggleSound);
     const lang = button(

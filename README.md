@@ -34,6 +34,10 @@ Other scripts:
   move), *free* (stays where you leave it), *top* (straight down), *side*,
   *corner* (diagonal three-quarter view) and *orbit* (circles the board slowly).
   The choice is remembered.
+- **Scene** switches between the dark ritual *arena* (braziers, runes, strong
+  glow, ominous drone) and a sunny *meadow* in the mountains (snowy peaks,
+  pines, flowers, clouds and butterflies, soft light and a calm music-box tune
+  with birdsong). The choice is remembered.
 - When the game ends, **Review the game** steps through every position:
   ⏮ ◀ ▶ ⏭ buttons or ← → Home End keys, click a move in the list to jump to it,
   Escape to go back to the result. The last move and any check stay highlighted.
@@ -78,6 +82,8 @@ src/
   app/           GameController: input → domain moves → presentation, input locking
   rendering/     three.js presentation
     stage.ts       renderer, camera, lights, bloom, frame loop, camera flights
+    scenery.ts     scene looks (arena / meadow) and switching; meadow.ts builds the meadow
+    cameraModes.ts camera views (auto, free, top, side, corner, orbit)
     board.ts       board, frame, arena, braziers, embers, square markers
     boardView.ts   one PieceView per domain piece; plays domain events as animations
     pieces/        procedural lathe pieces that split at the "mouth" into monsters,
@@ -86,7 +92,7 @@ src/
     battle/        BattleDirector (capture duels) and Locomotion (walk, stomp, float, gallop)
     effects/       pooled shards and sparks; Fx: lightning, shockwaves, slash arcs, cutting in two
     animation/     promise-based tween timeline (respects fast-forward speed)
-  audio/         Web Audio procedural sound effects
+  audio/         Web Audio procedural sound effects and the meadow music (music.ts)
   ui/            HUD overlay (DOM + CSS)
   debug/         #lab view to inspect every monster up close
 ```
