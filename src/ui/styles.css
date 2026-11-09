@@ -157,6 +157,8 @@ html, body {
 .intro-mode .overlay { background: radial-gradient(ellipse at center, rgba(0,0,0,0.15), rgba(0,0,0,0.7)); }
 .intro-mode .panel, .intro-mode .hint { opacity: 0; pointer-events: none; }
 .card.intro { max-width: 460px; }
+.intro-actions { display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.btn.lang { white-space: nowrap; }
 .card.intro h2.big { font-size: 46px; letter-spacing: 0.3em; text-shadow: 0 0 24px rgba(214, 166, 74, 0.7); }
 
 @keyframes pulse { from { opacity: 0.55; } to { opacity: 1; } }

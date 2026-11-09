@@ -12,6 +12,8 @@ Branch: `feat/chess-3d-monsters` · Delivery: `single-pr` (unattended overnight 
 - S7 — Built with Gentle AI workflow (this document, work-unit commits).
 - S8 — Distinct, creative battles per piece: "todas las animaciones son identicas. Hay que ser más cretivos. Por ejemplo los peones podrían llevar una pequeña espada, los alfiles una gran espada y un escudo, y así... siendo creativos".
 - S10 — Royal figures: "que la reina sea una dama, preciosa y deslumbrante, con un gran baculo que usa en sus batallas." / "El rey un apuesto señor con corona y capa. Una espada a la cintura que solo saca del cinturón para atacar."
+- S11 — Language: "me falta que pueda cambiarle de idioma y por defecto coja el de el pc".
+- S12 — New name: "el nombre de Monster Chess no vale. Hay que encontrar un nombre que no lance resultados en Google. Algo que sea original y único." (pending the user's choice)
 - S9 — Animated ordinary moves per piece: "sería posible también tener animaciones al mover las fichas? por ejemplo, el caballo se podría convertir en un caballero montado que anda de verdad, la torre en un gran mounstruo de barrio que anda, ....".
 
 Assumption (A1): pieces and monsters are generated procedurally in code (no external model files) so the transformation piece→monster is fully controllable and license-free; external models can be swapped in later through the piece factory.
@@ -31,6 +33,8 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
 | T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | d3fbcae |
 | T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests; 90-ply random game clean) | 375e94b |
+| T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | pending |
+| T14 | S12 | inline | pending user choice (candidates searched) | |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
@@ -63,3 +67,4 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L12 (2026-11-09): T12 implemented. Figure rig (figure.ts) replaces the monster form for queen and king: the lady (bell gown with glowing stripes, tiara, hair, orbiting sparkles, great crystal staff) glides on moves; the lord (crown, beard, ermine-collared waving cape, legs, belt and scabbard) strides with the sword sheathed and draws it only to fight (drawSword/sheatheSword). Queen finisher: three staff bolts, sky lightning crystallises the victim, staff tap shatters it. King finisher: draw, dash through with a horizontal slash, sheathe, victim's top half slides off (horizontal clipping split). Hammer/abyss portal and queen tentacle feeding removed. Checks: `npm test` 31/31, `npm run build` OK.
 - L13 (2026-11-09, user): "venga, ve puliendo los elementos que has ido anotando como pendientes, de más fácil a más complicado." → order: (1) bishop/king cut halves visibility, (2) rook legs, (3) unheard sounds. RDD re-enable left to the user.
 - L14 (2026-11-09): (1) c8b12d0 — the cut halves were flipped under the board (euler overwrite); now rotated with quaternions and glowing. (2) 08c4130 — rook brute gets two clawed beast legs solved with two-bone IK; tests assert both feet on the floor and one lifted mid-stride. (3) Offline audio analysis (OfflineAudioContext) showed a 15-30 dB imbalance (roar 0.6 peak vs hooves 0.02, queen steps 0.008) and setTimeout-scheduled sounds that ignored the audio clock; added per-sound LEVELS, scheduled everything on the audio clock, and `Sfx.measure`/`chess.soundCheck()`. All peaks now 0.05-0.51, none clipping. Still not listened to by a human.
+- L15 (2026-11-09, user): "como continuarías? por cierto, me falta que pueda cambiarle de idioma y por defecto coja el de el pc. además, el nombre de Monster Chess no vale. Hay que encontrar un nombre que no lance resultados en Google. Algo que sea original y único." → T13 done: src/ui/i18n.ts (en/es dictionaries, detectLanguage from navigator.languages, localStorage choice), HUD redraws live incl. open dialogs, battle captions translated, title kept in APP_NAME for the rename. 39/39 tests. T14: candidates with zero exact-match web results (Checkmaw, Mawmate, Gnashmate, Escaquimera); awaiting choice.

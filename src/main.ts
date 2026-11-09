@@ -4,6 +4,7 @@ import { Board } from './rendering/board';
 import { BoardView } from './rendering/boardView';
 import { Stage } from './rendering/stage';
 import { Hud } from './ui/hud';
+import { I18n } from './ui/i18n';
 
 const container = document.getElementById('app')!;
 const stage = new Stage(container);
@@ -13,6 +14,7 @@ stage.scene.add(board.group);
 stage.onFrame((dt) => board.update(dt));
 
 let controller: GameController | null = null;
+const i18n = new I18n();
 const hud = new Hud(container, {
   onUndo: () => controller?.undo(),
   onRestart: () => controller?.restart(),
@@ -20,10 +22,10 @@ const hud = new Hud(container, {
   onToggleMarches: (on) => (view.marches = on),
   onToggleSound: (on) => sfx.setMuted(!on),
   onToggleAutoCamera: (on) => controller?.setAutoCamera(on),
-});
+}, i18n);
 const view = new BoardView(stage, sfx, {
   letterbox: (on) => hud.letterbox(on),
-  caption: (text) => hud.caption(text),
+  announce: (type) => hud.announce(type),
 });
 stage.scene.add(view.group);
 
@@ -62,4 +64,4 @@ async function soundCheck(): Promise<void> {
   console.table(rows);
 }
 
-(window as unknown as { chess: unknown }).chess = { controller, stage, view, soundCheck };
+(window as unknown as { chess: unknown }).chess = { controller, stage, view, i18n, soundCheck };

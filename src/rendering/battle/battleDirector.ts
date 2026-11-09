@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Sfx } from '../../audio/sfx';
+import type { PieceType } from '../../domain/types';
 import type { Stage } from '../stage';
 import type { Particles } from '../effects/particles';
 import { Fx } from '../effects/fx';
@@ -9,10 +10,9 @@ import { Locomotion } from './locomotion';
 
 export interface BattleHooks {
   letterbox(on: boolean): void;
-  caption(text: string | null): void;
+  /** Announces which piece is transforming (null hides the caption). */
+  announce(type: PieceType | null): void;
 }
-
-const PIECE_NAMES: Record<string, string> = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
 
 /** How close each attacker stands before striking (weapon reach). */
 const REACH: Record<string, number> = { p: 0.6, n: 0, b: 0.95, r: 0.62, q: 1.7, k: 0.8 };
@@ -67,9 +67,9 @@ export class BattleDirector {
     await Promise.all([this.frameFight(A, V, savedPose.position, 1.1), this.faceEachOther(attacker, victim, 0.5)]);
     const stopTracking = this.track(attacker, victim);
 
-    this.hooks.caption(`${PIECE_NAMES[attacker.type]} becomes ${attacker.traits.name}`);
+    this.hooks.announce(attacker.type);
     await this.transform(attacker);
-    this.hooks.caption(null);
+    this.hooks.announce(null);
     await this.victimDefies(victim, attacker);
 
     const reach = REACH[attacker.type];

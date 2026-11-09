@@ -39,7 +39,6 @@ export interface MonsterTraits {
   bulk?: number;
   /** Walks on two jointed beast legs instead of spider legs. */
   biped?: boolean;
-  name: string;
 }
 
 export interface PieceShape {
@@ -66,7 +65,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.63,
     height: 0.81,
-    traits: { legs: 4, legLength: 0.72, lift: 0.37, teeth: 9, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 0, tongue: 0.4, gape: 1.35, name: 'Gnasher' },
+    traits: { legs: 4, legLength: 0.72, lift: 0.37, teeth: 9, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 0, tongue: 0.4, gape: 1.35 },
   },
   r: {
     profile: [
@@ -85,13 +84,13 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.66,
     height: 0.96,
-    traits: { legs: 2, legLength: 0.95, lift: 0.44, teeth: 12, toothSize: 0.085, eyeSize: 0.05, horns: 0, tentacles: 0, tongue: 0.9, gape: 1.75, legThickness: 2.0, bulk: 1.35, biped: true, name: 'Tower Brute' },
+    traits: { legs: 2, legLength: 0.95, lift: 0.44, teeth: 12, toothSize: 0.085, eyeSize: 0.05, horns: 0, tentacles: 0, tongue: 0.9, gape: 1.75, legThickness: 2.0, bulk: 1.35, biped: true },
   },
   n: {
     profile: [...BASE, [0.22, 0.22], [0.24, 0.27], [0.2, 0.29], [0, 0.29]],
     mouthY: 0.56,
     height: 1.0,
-    traits: { legs: 4, legLength: 0.9, lift: 0.51, teeth: 8, toothSize: 0.05, eyeSize: 0.04, horns: 2, tentacles: 0, tongue: 0.5, gape: 0.9, name: 'Night Mare' },
+    traits: { legs: 4, legLength: 0.9, lift: 0.51, teeth: 8, toothSize: 0.05, eyeSize: 0.04, horns: 2, tentacles: 0, tongue: 0.5, gape: 0.9 },
   },
   b: {
     profile: [
@@ -113,7 +112,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.84,
     height: 1.15,
-    traits: { legs: 4, legLength: 0.87, lift: 0.48, teeth: 10, toothSize: 0.05, eyeSize: 0.04, horns: 0, tentacles: 3, tongue: 1.6, gape: 1.2, name: 'Grave Paladin' },
+    traits: { legs: 4, legLength: 0.87, lift: 0.48, teeth: 10, toothSize: 0.05, eyeSize: 0.04, horns: 0, tentacles: 3, tongue: 1.6, gape: 1.2 },
   },
   q: {
     profile: [
@@ -135,7 +134,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 1.0,
     height: 1.35,
-    traits: { legs: 6, legLength: 1.04, lift: 0.61, teeth: 14, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 6, tongue: 0.9, gape: 1.3, name: 'the Radiant Lady' },
+    traits: { legs: 6, legLength: 1.04, lift: 0.61, teeth: 14, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 6, tongue: 0.9, gape: 1.3 },
   },
   k: {
     profile: [
@@ -155,7 +154,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 1.05,
     height: 1.58,
-    traits: { legs: 8, legLength: 1.16, lift: 0.68, teeth: 16, toothSize: 0.07, eyeSize: 0.05, horns: 2, tentacles: 0, tongue: 1.1, gape: 1.4, name: 'the Sovereign' },
+    traits: { legs: 8, legLength: 1.16, lift: 0.68, teeth: 16, toothSize: 0.07, eyeSize: 0.05, horns: 2, tentacles: 0, tongue: 1.1, gape: 1.4 },
   },
 };
 

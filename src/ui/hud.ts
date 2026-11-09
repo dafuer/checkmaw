@@ -1,17 +1,9 @@
-import type { Color, GameResult, Piece, PromotionType } from '../domain/types';
+import type { Color, GameResult, Piece, PieceType, PromotionType } from '../domain/types';
+import { APP_NAME, type I18n } from './i18n';
 
 const GLYPHS: Record<string, string> = {
   wp: '♙', wn: '♘', wb: '♗', wr: '♖', wq: '♕', wk: '♔',
   bp: '♟', bn: '♞', bb: '♝', br: '♜', bq: '♛', bk: '♚',
-};
-
-const REASONS: Record<GameResult['reason'], string> = {
-  checkmate: 'Checkmate',
-  stalemate: 'Stalemate',
-  threefold: 'Threefold repetition',
-  insufficient: 'Insufficient material',
-  'fifty-moves': 'Fifty-move rule',
-  draw: 'Draw',
 };
 
 export interface HudActions {
@@ -30,71 +22,100 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, t
   return e;
 }
 
-/** DOM overlay: status, controls, captured pieces, dialogs and cinematic bars. */
+/** What the overlay currently shows, so it can be redrawn in another language. */
+type OverlayState =
+  | { kind: 'none' }
+  | { kind: 'intro'; onStart: () => void }
+  | { kind: 'promotion'; color: Color; resolve: (t: PromotionType) => void }
+  | { kind: 'gameOver'; result: GameResult; onRestart: () => void };
+
+/**
+ * DOM overlay: status, controls, captured pieces, dialogs and cinematic bars.
+ * Every visible string comes from I18n and is redrawn when the language changes.
+ */
 export class Hud {
   readonly root = el('div', 'hud');
+  private readonly title = el('h1', 'title');
   private readonly turn = el('div', 'turn');
   private readonly status = el('div', 'status');
   private readonly capturedByWhite = el('div', 'tray');
   private readonly capturedByBlack = el('div', 'tray');
+  private readonly devouredTitle = el('h2');
+  private readonly movesTitle = el('h2');
   private readonly moves = el('ol', 'moves');
+  private readonly hint = el('div', 'hint');
   private readonly barTop = el('div', 'bar bar-top');
   private readonly barBottom = el('div', 'bar bar-bottom');
   private readonly captionEl = el('div', 'caption');
   private readonly overlay = el('div', 'overlay hidden');
+  private readonly redrawControls: Array<() => void> = [];
+  private overlayState: OverlayState = { kind: 'none' };
+  private turnState: { color: Color; inCheck: boolean; result: GameResult | null } = { color: 'w', inCheck: false, result: null };
+  private captured: Piece[] = [];
+  private captionPiece: PieceType | null = null;
 
-  constructor(container: HTMLElement, actions: HudActions) {
+  constructor(container: HTMLElement, actions: HudActions, private readonly i18n: I18n) {
     const header = el('header', 'panel header');
-    header.append(el('h1', 'title', 'MONSTER CHESS'), this.turn, this.status);
+    header.append(this.title, this.turn, this.status);
 
     const controls = el('div', 'panel controls');
-    const button = (label: string, title: string, onClick: (b: HTMLButtonElement) => void) => {
-      const b = el('button', 'btn', label);
-      b.title = title;
-      b.addEventListener('click', () => onClick(b));
+    const button = (label: () => string, title: () => string, onClick: () => void) => {
+      const b = el('button', 'btn');
+      b.addEventListener('click', onClick);
+      const redraw = () => {
+        b.textContent = label();
+        b.title = title();
+      };
+      redraw();
+      this.redrawControls.push(redraw);
       controls.append(b);
       return b;
     };
-    button('↶ Undo', 'Undo last move (U)', () => actions.onUndo());
-    button('⟲ New game', 'Start a new game', () => actions.onRestart());
-    const toggle = (label: string, title: string, initial: boolean, cb: (on: boolean) => void) => {
-      let on = initial;
-      const b = button('', title, () => {
-        on = !on;
-        b.textContent = `${label}: ${on ? 'on' : 'off'}`;
-        b.classList.toggle('off', !on);
-        cb(on);
-      });
-      b.textContent = `${label}: ${on ? 'on' : 'off'}`;
+    button(() => this.i18n.t.undo, () => this.i18n.t.undoTitle, () => actions.onUndo());
+    button(() => this.i18n.t.newGame, () => this.i18n.t.newGameTitle, () => actions.onRestart());
+    const toggle = (label: () => string, title: () => string, cb: (on: boolean) => void) => {
+      let on = true;
+      const b = button(
+        () => `${label()}: ${on ? this.i18n.t.on : this.i18n.t.off}`,
+        title,
+        () => {
+          on = !on;
+          b.classList.toggle('off', !on);
+          this.redraw();
+          cb(on);
+        },
+      );
     };
-    toggle('Battles', 'Monster battle cinematics on captures', true, actions.onToggleCinematics);
-    toggle('Walks', 'Pieces transform and walk, ride or float on every move', true, actions.onToggleMarches);
-    toggle('Auto camera', 'Turn the camera to the side to move', true, actions.onToggleAutoCamera);
-    toggle('Sound', 'Procedural sound effects', true, actions.onToggleSound);
+    toggle(() => this.i18n.t.battles, () => this.i18n.t.battlesTitle, actions.onToggleCinematics);
+    toggle(() => this.i18n.t.walks, () => this.i18n.t.walksTitle, actions.onToggleMarches);
+    toggle(() => this.i18n.t.autoCamera, () => this.i18n.t.autoCameraTitle, actions.onToggleAutoCamera);
+    toggle(() => this.i18n.t.sound, () => this.i18n.t.soundTitle, actions.onToggleSound);
+    const lang = button(
+      () => `🌐 ${this.i18n.t.languageName}`,
+      () => this.i18n.t.languageTitle,
+      () => this.i18n.set(this.i18n.next()),
+    );
+    lang.classList.add('lang');
 
     const side = el('aside', 'panel side');
-    side.append(el('h2', '', 'Devoured'), this.capturedByWhite, this.capturedByBlack, el('h2', '', 'Moves'), this.moves);
+    side.append(this.devouredTitle, this.capturedByWhite, this.capturedByBlack, this.movesTitle, this.moves);
 
-    const hint = el('div', 'hint', 'Click a piece, then a glowing square · Drag to orbit · Scroll to zoom · Hold SPACE to fast-forward battles');
-
-    this.root.append(header, controls, side, hint, this.barTop, this.barBottom, this.captionEl, this.overlay);
+    this.root.append(header, controls, side, this.hint, this.barTop, this.barBottom, this.captionEl, this.overlay);
     container.append(this.root);
+    i18n.onChange(() => this.redraw());
+    this.redraw();
   }
 
   setTurn(color: Color, inCheck: boolean, result: GameResult | null = null): void {
-    this.turn.textContent = `${color === 'w' ? 'White' : 'Black'} to move`;
+    this.turnState = { color, inCheck, result };
     this.turn.dataset.color = color;
-    this.status.textContent = result ? REASONS[result.reason].toUpperCase() : inCheck ? 'CHECK!' : '';
     this.status.classList.toggle('alert', inCheck);
+    this.redrawTurn();
   }
 
   setCaptured(captured: Piece[]): void {
-    const render = (tray: HTMLElement, pieces: Piece[], label: string) => {
-      tray.replaceChildren(el('span', 'tray-label', label));
-      for (const p of pieces) tray.append(el('span', `glyph ${p.color}`, GLYPHS[p.color + p.type]));
-    };
-    render(this.capturedByWhite, captured.filter((p) => p.color === 'b'), 'White ate');
-    render(this.capturedByBlack, captured.filter((p) => p.color === 'w'), 'Black ate');
+    this.captured = captured;
+    this.redrawCaptured();
   }
 
   setMoves(sans: string[]): void {
@@ -111,68 +132,117 @@ export class Hud {
     this.root.classList.toggle('cinematic', on);
   }
 
-  caption(text: string | null): void {
-    this.captionEl.textContent = text ?? '';
-    this.captionEl.classList.toggle('show', !!text);
+  /** Shows "<piece> becomes <form>" for a transforming piece, or hides it with null. */
+  announce(type: PieceType | null): void {
+    this.captionPiece = type;
+    this.captionEl.textContent = type ? this.i18n.becomes(type) : '';
+    this.captionEl.classList.toggle('show', !!type);
   }
 
   askPromotion(color: Color): Promise<PromotionType> {
     return new Promise((resolve) => {
-      this.overlay.replaceChildren();
-      const card = el('div', 'card');
-      card.append(el('h2', '', 'Promote your pawn'));
-      const row = el('div', 'promo');
-      for (const t of ['q', 'r', 'b', 'n'] as PromotionType[]) {
-        const b = el('button', 'promo-btn', GLYPHS[color + t]);
-        b.addEventListener('click', () => {
-          this.overlay.classList.add('hidden');
-          resolve(t);
-        });
-        row.append(b);
-      }
-      card.append(row);
-      this.overlay.append(card);
-      this.overlay.classList.remove('hidden');
+      this.overlayState = { kind: 'promotion', color, resolve };
+      this.redrawOverlay();
     });
   }
 
   showGameOver(result: GameResult, onRestart: () => void): void {
-    this.overlay.replaceChildren();
-    const card = el('div', 'card');
-    const headline = result.winner ? `${result.winner === 'w' ? 'White' : 'Black'} wins` : 'Draw';
-    card.append(el('h2', 'big', headline), el('p', '', REASONS[result.reason]));
-    const again = el('button', 'btn primary', 'Play again');
-    again.addEventListener('click', () => {
-      this.overlay.classList.add('hidden');
-      onRestart();
-    });
-    card.append(again);
-    this.overlay.append(card);
-    this.overlay.classList.add('end');
-    this.overlay.classList.remove('hidden');
+    this.overlayState = { kind: 'gameOver', result, onRestart };
+    this.redrawOverlay();
   }
 
   showIntro(onStart: () => void): void {
-    this.overlay.replaceChildren();
-    const card = el('div', 'card intro');
-    card.append(
-      el('h2', 'big', 'MONSTER CHESS'),
-      el('p', '', 'Two players, one board. Every capture awakens the monster inside the piece.'),
-    );
-    const start = el('button', 'btn primary', 'Begin the hunt');
-    start.addEventListener('click', () => {
-      this.overlay.classList.add('hidden');
-      this.root.classList.remove('intro-mode');
-      onStart();
-    });
-    card.append(start);
-    this.overlay.append(card);
-    this.overlay.classList.remove('hidden');
+    this.overlayState = { kind: 'intro', onStart };
     this.root.classList.add('intro-mode');
+    this.redrawOverlay();
   }
 
   hideOverlay(): void {
-    this.overlay.classList.add('hidden');
-    this.overlay.classList.remove('end');
+    this.overlayState = { kind: 'none' };
+    this.redrawOverlay();
+  }
+
+  // ---------------------------------------------------------------- drawing
+
+  private redraw(): void {
+    const t = this.i18n.t;
+    document.title = `${APP_NAME} 3D`;
+    this.title.textContent = APP_NAME.toUpperCase();
+    this.devouredTitle.textContent = t.devoured;
+    this.movesTitle.textContent = t.moves;
+    this.hint.textContent = t.hint;
+    for (const r of this.redrawControls) r();
+    this.redrawTurn();
+    this.redrawCaptured();
+    if (this.captionPiece) this.captionEl.textContent = this.i18n.becomes(this.captionPiece);
+    this.redrawOverlay();
+  }
+
+  private redrawTurn(): void {
+    const t = this.i18n.t;
+    const { color, inCheck, result } = this.turnState;
+    this.turn.textContent = t.toMove[color];
+    this.status.textContent = result ? t.reasons[result.reason].toUpperCase() : inCheck ? t.check : '';
+  }
+
+  private redrawCaptured(): void {
+    const t = this.i18n.t;
+    const render = (tray: HTMLElement, pieces: Piece[], label: string) => {
+      tray.replaceChildren(el('span', 'tray-label', label));
+      for (const p of pieces) tray.append(el('span', `glyph ${p.color}`, GLYPHS[p.color + p.type]));
+    };
+    render(this.capturedByWhite, this.captured.filter((p) => p.color === 'b'), t.ate.w);
+    render(this.capturedByBlack, this.captured.filter((p) => p.color === 'w'), t.ate.b);
+  }
+
+  private redrawOverlay(): void {
+    const t = this.i18n.t;
+    const state = this.overlayState;
+    this.overlay.replaceChildren();
+    this.overlay.classList.toggle('hidden', state.kind === 'none');
+    this.overlay.classList.toggle('end', state.kind === 'gameOver');
+    if (state.kind !== 'intro') this.root.classList.remove('intro-mode');
+    if (state.kind === 'none') return;
+
+    const card = el('div', 'card');
+    if (state.kind === 'promotion') {
+      card.append(el('h2', '', t.promote));
+      const row = el('div', 'promo');
+      for (const type of ['q', 'r', 'b', 'n'] as PromotionType[]) {
+        const b = el('button', 'promo-btn', GLYPHS[state.color + type]);
+        b.title = t.piece[type];
+        b.addEventListener('click', () => {
+          this.hideOverlay();
+          state.resolve(type);
+        });
+        row.append(b);
+      }
+      card.append(row);
+    } else if (state.kind === 'gameOver') {
+      const headline = state.result.winner ? t.wins[state.result.winner] : t.draw;
+      card.append(el('h2', 'big', headline), el('p', '', t.reasons[state.result.reason]));
+      const again = el('button', 'btn primary', t.playAgain);
+      again.addEventListener('click', () => {
+        this.hideOverlay();
+        state.onRestart();
+      });
+      card.append(again);
+    } else {
+      card.classList.add('intro');
+      card.append(el('h2', 'big', APP_NAME.toUpperCase()), el('p', '', t.introTagline));
+      const start = el('button', 'btn primary', t.introStart);
+      start.addEventListener('click', () => {
+        this.hideOverlay();
+        state.onStart();
+      });
+      // The intro hides the control panel, so it offers its own language switch.
+      const lang = el('button', 'btn lang', `🌐 ${t.languageName}`);
+      lang.title = t.languageTitle;
+      lang.addEventListener('click', () => this.i18n.set(this.i18n.next()));
+      const row = el('div', 'intro-actions');
+      row.append(start, lang);
+      card.append(row);
+    }
+    this.overlay.append(card);
   }
 }

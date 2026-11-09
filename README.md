@@ -32,6 +32,14 @@ Other scripts:
   Walks on/off (animated ordinary moves), Auto camera (turns the board to the
   side to move), Sound.
 
+## Languages
+
+The game is in English and Spanish. It starts in the system language (any
+`es-*` locale picks Spanish, anything unsupported falls back to English); the
+🌐 button on the title screen and in the controls switches it, and the choice is
+remembered in the browser. Strings live in `src/ui/i18n.ts`; adding a language
+means adding one dictionary there (a test checks every key is translated).
+
 ## The monsters
 
 Every capture is a short duel. Pawns, knights, bishops and rooks turn into
