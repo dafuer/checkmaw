@@ -40,7 +40,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | f3331e4 |
 | T14 | S12 | inline | done (renamed to Checkmaw) | 07aa23f |
 | T15 | S13 | inline | done (favicon checked at 256/32/16 px in Chrome) | see git log |
-| T16 | S16 | inline | pending | |
+| T16 | S16 | inline | done (cameraModes unit tests; top and side views checked in Chrome) | see git log |
 | T17 | S14 | inline | pending | |
 | T18 | S15 | inline | pending | |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |

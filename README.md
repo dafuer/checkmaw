@@ -29,8 +29,11 @@ Other scripts:
 - Drag to orbit the camera, scroll to zoom.
 - Hold **Space** to fast-forward a battle; press **U** to undo.
 - Top-right controls: Undo, New game, Battles on/off (instant captures when off),
-  Walks on/off (animated ordinary moves), Auto camera (turns the board to the
-  side to move), Sound.
+  Walks on/off (animated ordinary moves), Camera, Sound.
+- **Camera** (or press **C**) cycles the views: *auto* (turns to the side to
+  move), *free* (stays where you leave it), *top* (straight down), *side*,
+  *corner* (diagonal three-quarter view) and *orbit* (circles the board slowly).
+  The choice is remembered.
 
 ## Languages
 

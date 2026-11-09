@@ -1,4 +1,5 @@
 import type { Color, GameResult, Piece, PieceType, PromotionType } from '../domain/types';
+import { CAMERA_MODES, type CameraMode } from '../rendering/cameraModes';
 import { APP_NAME, type I18n } from './i18n';
 
 const GLYPHS: Record<string, string> = {
@@ -12,7 +13,12 @@ export interface HudActions {
   onToggleCinematics(on: boolean): void;
   onToggleMarches(on: boolean): void;
   onToggleSound(on: boolean): void;
-  onToggleAutoCamera(on: boolean): void;
+  onCameraMode(mode: CameraMode): void;
+}
+
+/** Choices the HUD starts with (restored from the player's last session). */
+export interface HudSettings {
+  camera: CameraMode;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -54,7 +60,7 @@ export class Hud {
   private captured: Piece[] = [];
   private captionPiece: PieceType | null = null;
 
-  constructor(container: HTMLElement, actions: HudActions, private readonly i18n: I18n) {
+  constructor(container: HTMLElement, actions: HudActions, private readonly i18n: I18n, settings: HudSettings) {
     const header = el('header', 'panel header');
     header.append(this.title, this.turn, this.status);
 
@@ -88,7 +94,22 @@ export class Hud {
     };
     toggle(() => this.i18n.t.battles, () => this.i18n.t.battlesTitle, actions.onToggleCinematics);
     toggle(() => this.i18n.t.walks, () => this.i18n.t.walksTitle, actions.onToggleMarches);
-    toggle(() => this.i18n.t.autoCamera, () => this.i18n.t.autoCameraTitle, actions.onToggleAutoCamera);
+    /** A button that steps through a list of values, showing the current one. */
+    const cycle = <T extends string>(values: readonly T[], initial: T, label: (v: T) => string, title: () => string, cb: (v: T) => void, key?: string) => {
+      let value = initial;
+      const step = () => {
+        value = values[(values.indexOf(value) + 1) % values.length];
+        this.redraw();
+        cb(value);
+      };
+      button(() => label(value), title, step);
+      if (key) {
+        window.addEventListener('keydown', (e) => {
+          if (e.key.toLowerCase() === key && !e.repeat && !this.root.classList.contains('intro-mode')) step();
+        });
+      }
+    };
+    cycle(CAMERA_MODES, settings.camera, (m) => `${this.i18n.t.camera}: ${this.i18n.t.cameraModes[m]}`, () => this.i18n.t.cameraTitle, actions.onCameraMode, 'c');
     toggle(() => this.i18n.t.sound, () => this.i18n.t.soundTitle, actions.onToggleSound);
     const lang = button(
       () => `🌐 ${this.i18n.t.languageName}`,

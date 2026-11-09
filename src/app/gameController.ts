@@ -1,26 +1,24 @@
 import * as THREE from 'three';
 import { ChessGame } from '../domain/game';
-import type { Color, GameEvent, GameResult, Square } from '../domain/types';
+import type { GameEvent, GameResult, Square } from '../domain/types';
 import type { Sfx } from '../audio/sfx';
 import type { Board } from '../rendering/board';
 import type { BoardView } from '../rendering/boardView';
-import type { CameraPose, Stage } from '../rendering/stage';
+import type { Stage } from '../rendering/stage';
+import { cameraPose, followsTurn, ORBIT_SPEED, type CameraMode } from '../rendering/cameraModes';
 import type { Hud } from '../ui/hud';
-
-const SIDE_POSE: Record<Color, CameraPose> = {
-  w: { position: new THREE.Vector3(0, 11.2, 8.4), target: new THREE.Vector3(0, 0, 0.5) },
-  b: { position: new THREE.Vector3(0, 11.2, -8.4), target: new THREE.Vector3(0, 0, -0.5) },
-};
 
 /**
  * Application layer: turns pointer input into domain moves and feeds the
  * resulting events to the presentation. Input is locked while animations run.
  */
+const UP = new THREE.Vector3(0, 1, 0);
+
 export class GameController {
   private game = new ChessGame();
   private selected: Square | null = null;
   private busy = false;
-  private autoCamera = true;
+  private cameraMode: CameraMode = 'auto';
   private lastMove: Square[] = [];
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
@@ -51,6 +49,14 @@ export class GameController {
       }
       if (e.key === 'u' || e.key === 'U') this.undo();
     });
+    // The orbit view circles the board while nobody is dragging it.
+    let dragging = false;
+    canvas.addEventListener('pointerdown', () => (dragging = true));
+    window.addEventListener('pointerup', () => (dragging = false));
+    stage.onFrame((dt) => {
+      if (this.cameraMode !== 'orbit' || dragging || !stage.controls.enabled) return;
+      stage.camera.position.sub(stage.controls.target).applyAxisAngle(UP, dt * ORBIT_SPEED).add(stage.controls.target);
+    });
     window.addEventListener('keyup', (e) => {
       if (e.code === 'Space') this.stage.animator.speed = 1;
     });
@@ -61,9 +67,17 @@ export class GameController {
     this.refresh();
   }
 
-  setAutoCamera(on: boolean): void {
-    this.autoCamera = on;
-    if (on && !this.busy) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 1.2);
+  /** Switches the camera mode and flies to its view (free keeps the camera where it is). */
+  setCameraMode(mode: CameraMode): void {
+    this.cameraMode = mode;
+    const pose = cameraPose(mode, this.game.turn());
+    if (pose && !this.busy) void this.stage.flyTo(pose, 1.2);
+  }
+
+  /** In auto mode the camera turns to the side to move. */
+  private followTurn(duration: number): void {
+    if (!followsTurn(this.cameraMode)) return;
+    void this.stage.flyTo(cameraPose(this.cameraMode, this.game.turn())!, duration);
   }
 
   restart(fen?: string): void {
@@ -74,7 +88,7 @@ export class GameController {
     this.hud.hideOverlay();
     this.view.sync(this.game.pieces());
     this.refresh();
-    if (this.autoCamera) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 1.2);
+    this.followTurn(1.2);
   }
 
   undo(): void {
@@ -84,7 +98,7 @@ export class GameController {
     this.hud.hideOverlay();
     this.view.sync(this.game.pieces());
     this.refresh();
-    if (this.autoCamera) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 0.9);
+    this.followTurn(0.9);
   }
 
   /** Test/automation hook: plays a move as if the user clicked it. */
@@ -183,7 +197,7 @@ export class GameController {
       return;
     }
     if (events.some((e) => e.kind === 'check')) this.sfx.check();
-    if (this.autoCamera) void this.stage.flyTo(SIDE_POSE[this.game.turn()], 1.3);
+    this.followTurn(1.3);
   }
 
   private async finish(result: GameResult): Promise<void> {

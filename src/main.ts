@@ -5,6 +5,8 @@ import { BoardView } from './rendering/boardView';
 import { Stage } from './rendering/stage';
 import { Hud } from './ui/hud';
 import { I18n } from './ui/i18n';
+import { readPref, writePref } from './ui/prefs';
+import { readCameraMode } from './rendering/cameraModes';
 
 const container = document.getElementById('app')!;
 const stage = new Stage(container);
@@ -15,14 +17,18 @@ stage.onFrame((dt) => board.update(dt));
 
 let controller: GameController | null = null;
 const i18n = new I18n();
+const settings = { camera: readCameraMode(readPref('camera')) };
 const hud = new Hud(container, {
   onUndo: () => controller?.undo(),
   onRestart: () => controller?.restart(),
   onToggleCinematics: (on) => (view.cinematics = on),
   onToggleMarches: (on) => (view.marches = on),
   onToggleSound: (on) => sfx.setMuted(!on),
-  onToggleAutoCamera: (on) => controller?.setAutoCamera(on),
-}, i18n);
+  onCameraMode: (mode) => {
+    writePref('camera', mode);
+    controller?.setCameraMode(mode);
+  },
+}, i18n, settings);
 const view = new BoardView(stage, sfx, {
   letterbox: (on) => hud.letterbox(on),
   announce: (type) => hud.announce(type),
@@ -31,6 +37,7 @@ stage.scene.add(view.group);
 
 controller = new GameController(stage, board, view, hud, sfx);
 controller.start();
+if (location.search.includes('skipIntro')) controller.setCameraMode(settings.camera);
 stage.start();
 
 // Title screen: the camera circles the arena until the players begin.
@@ -46,7 +53,7 @@ if (!location.hash.startsWith('#lab') && !location.search.includes('skipIntro'))
     sfx.unlock();
     stopOrbit();
     stage.controls.enabled = true;
-    controller?.setAutoCamera(true);
+    controller?.setCameraMode(settings.camera);
   });
 }
 

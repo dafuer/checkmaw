@@ -1,4 +1,5 @@
 import type { Color, GameResult, PieceType } from '../domain/types';
+import type { CameraMode } from '../rendering/cameraModes';
 
 export type Lang = 'en' | 'es';
 
@@ -24,8 +25,9 @@ interface Dictionary {
   battlesTitle: string;
   walks: string;
   walksTitle: string;
-  autoCamera: string;
-  autoCameraTitle: string;
+  camera: string;
+  cameraTitle: string;
+  cameraModes: Record<CameraMode, string>;
   sound: string;
   soundTitle: string;
   on: string;
@@ -69,8 +71,9 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     battlesTitle: 'Battle cinematics on captures',
     walks: 'Walks',
     walksTitle: 'Pieces transform and walk, ride or glide on every move',
-    autoCamera: 'Auto camera',
-    autoCameraTitle: 'Turn the camera to the side to move',
+    camera: 'Camera',
+    cameraTitle: 'Change the camera view (C)',
+    cameraModes: { auto: 'auto', free: 'free', top: 'top', side: 'side', corner: 'corner', orbit: 'orbit' },
     sound: 'Sound',
     soundTitle: 'Procedural sound effects',
     on: 'on',
@@ -117,8 +120,9 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     battlesTitle: 'Cinemáticas de batalla en cada captura',
     walks: 'Paseos',
     walksTitle: 'Las piezas se transforman y caminan, cabalgan o se deslizan en cada jugada',
-    autoCamera: 'Cámara automática',
-    autoCameraTitle: 'Girar la cámara hacia el bando que mueve',
+    camera: 'Cámara',
+    cameraTitle: 'Cambiar la vista de la cámara (C)',
+    cameraModes: { auto: 'auto', free: 'libre', top: 'cenital', side: 'lateral', corner: 'esquina', orbit: 'órbita' },
     sound: 'Sonido',
     soundTitle: 'Efectos de sonido procedurales',
     on: 'sí',
