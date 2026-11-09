@@ -30,7 +30,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T8 | S1 | inline | done | 07677c8, c50ce51 |
 | T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
 | T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | d3fbcae |
-| T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests) | pending |
+| T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests; 90-ply random game clean) | 375e94b |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
