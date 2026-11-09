@@ -28,8 +28,8 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T7 | S3, S6 | inline | done (not audible-verified; no errors) | 07677c8 |
 | T8 | S1 | inline | done | 07677c8, c50ce51 |
 | T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
-| T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | see L10 |
-| T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | see L10 |
+| T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | d3fbcae |
+| T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
 - T2 Domain: game model over chess.js with stable piece ids and domain events (moved, captured, castled, en passant, promoted, check, game over), undo. Unit tests.
