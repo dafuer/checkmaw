@@ -166,7 +166,7 @@ export class Hud {
 
   private redraw(): void {
     const t = this.i18n.t;
-    document.title = `${APP_NAME} 3D`;
+    document.title = APP_NAME;
     this.title.textContent = APP_NAME.toUpperCase();
     this.devouredTitle.textContent = t.devoured;
     this.movesTitle.textContent = t.moves;

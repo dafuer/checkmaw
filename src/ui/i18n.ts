@@ -6,7 +6,7 @@ export type Lang = 'en' | 'es';
 export const LANGS: readonly Lang[] = ['en', 'es'];
 
 /** Game title, kept in one place until the final name is chosen. */
-export const APP_NAME = 'Monster Chess';
+export const APP_NAME = 'Checkmaw';
 
 interface Dictionary {
   languageName: string;

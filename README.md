@@ -1,4 +1,4 @@
-# Monster Chess 3D
+# Checkmaw
 
 Two-player chess in the browser where every capture becomes a short monster fight:
 the attacking piece cracks open, grows spider legs, teeth and glowing eyes, and
