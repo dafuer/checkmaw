@@ -44,3 +44,16 @@ export type GameEvent =
 export type MoveResult =
   | { ok: true; san: string; events: GameEvent[] }
   | { ok: false; reason: string };
+
+/** One position of a finished (or ongoing) game, for reviewing it move by move. */
+export interface ReviewFrame {
+  /** Half-moves played to reach this position (0 = the start). */
+  ply: number;
+  pieces: Piece[];
+  captured: Piece[];
+  /** The move that led here, or null for the starting position. */
+  move: { from: Square; to: Square; san: string } | null;
+  /** Whether the side to move is in check here. */
+  check: boolean;
+  turn: Color;
+}

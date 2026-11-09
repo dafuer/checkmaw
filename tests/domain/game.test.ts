@@ -130,4 +130,26 @@ describe('ChessGame', () => {
   it('returns false when there is nothing to undo', () => {
     expect(new ChessGame().undo()).toBe(false);
   });
+
+  it('lists every position of the game for review, with the move that led to it', () => {
+    const game = new ChessGame();
+    // Scholar's mate: 1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7#
+    play(game, [['e2', 'e4'], ['e7', 'e5'], ['f1', 'c4'], ['b8', 'c6'], ['d1', 'h5'], ['g8', 'f6'], ['h5', 'f7']]);
+    const frames = game.timeline();
+    expect(frames).toHaveLength(8);
+    expect(frames[0]).toMatchObject({ ply: 0, move: null, check: false, turn: 'w' });
+    expect(frames[0].pieces).toHaveLength(32);
+    expect(frames[1].move).toEqual({ from: 'e2', to: 'e4', san: 'e4' });
+    expect(frames[1].pieces.find((p) => p.square === 'e4')).toMatchObject({ type: 'p', color: 'w' });
+    expect(frames[1].turn).toBe('b');
+    const last = frames[7];
+    expect(last.move).toEqual({ from: 'h5', to: 'f7', san: 'Qxf7#' });
+    expect(last.check).toBe(true);
+    expect(last.pieces).toHaveLength(31);
+    expect(last.captured).toEqual([expect.objectContaining({ type: 'p', color: 'b' })]);
+    expect(last.pieces).toEqual(game.pieces());
+    // Reviewing does not change the game.
+    expect(game.sanHistory()).toHaveLength(7);
+    expect(game.status()).toMatchObject({ winner: 'w', reason: 'checkmate' });
+  });
 });

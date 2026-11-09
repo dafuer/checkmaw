@@ -16,6 +16,13 @@ export interface HudActions {
   onCameraMode(mode: CameraMode): void;
 }
 
+/** What the review bar and the move list call while a finished game is reviewed. */
+export interface ReviewActions {
+  step(delta: number): void;
+  jump(ply: number): void;
+  exit(): void;
+}
+
 /** Choices the HUD starts with (restored from the player's last session). */
 export interface HudSettings {
   camera: CameraMode;
@@ -33,7 +40,7 @@ type OverlayState =
   | { kind: 'none' }
   | { kind: 'intro'; onStart: () => void }
   | { kind: 'promotion'; color: Color; resolve: (t: PromotionType) => void }
-  | { kind: 'gameOver'; result: GameResult; onRestart: () => void };
+  | { kind: 'gameOver'; result: GameResult; onRestart: () => void; onReview: () => void };
 
 /**
  * DOM overlay: status, controls, captured pieces, dialogs and cinematic bars.
@@ -54,6 +61,8 @@ export class Hud {
   private readonly barBottom = el('div', 'bar bar-bottom');
   private readonly captionEl = el('div', 'caption');
   private readonly overlay = el('div', 'overlay hidden');
+  private readonly reviewBar = el('div', 'panel review hidden');
+  private review: { actions: ReviewActions; ply: number; last: number } | null = null;
   private readonly redrawControls: Array<() => void> = [];
   private overlayState: OverlayState = { kind: 'none' };
   private turnState: { color: Color; inCheck: boolean; result: GameResult | null } = { color: 'w', inCheck: false, result: null };
@@ -121,7 +130,7 @@ export class Hud {
     const side = el('aside', 'panel side');
     side.append(this.devouredTitle, this.capturedByWhite, this.capturedByBlack, this.movesTitle, this.moves);
 
-    this.root.append(header, controls, side, this.hint, this.barTop, this.barBottom, this.captionEl, this.overlay);
+    this.root.append(header, controls, side, this.reviewBar, this.hint, this.barTop, this.barBottom, this.captionEl, this.overlay);
     container.append(this.root);
     i18n.onChange(() => this.redraw());
     this.redraw();
@@ -143,10 +152,44 @@ export class Hud {
     this.moves.replaceChildren();
     for (let i = 0; i < sans.length; i += 2) {
       const li = el('li');
-      li.append(el('span', 'm', sans[i]), el('span', 'm', sans[i + 1] ?? ''));
+      for (const ply of [i + 1, i + 2]) {
+        const span = el('span', 'm', sans[ply - 1] ?? '');
+        span.dataset.ply = String(ply);
+        // While reviewing, a click on a move jumps to the position after it.
+        span.addEventListener('click', () => this.review?.actions.jump(ply));
+        li.append(span);
+      }
       this.moves.append(li);
     }
     this.moves.scrollTop = this.moves.scrollHeight;
+  }
+
+  /** Opens the review bar (first, previous, next, last and back to the result). */
+  showReview(actions: ReviewActions): void {
+    this.review = { actions, ply: 0, last: 0 };
+    this.root.classList.add('reviewing');
+    this.reviewBar.classList.remove('hidden');
+    this.redrawReview();
+  }
+
+  setReviewPly(ply: number, last: number): void {
+    if (!this.review) return;
+    this.review.ply = ply;
+    this.review.last = last;
+    this.redrawReview();
+    for (const span of this.moves.querySelectorAll<HTMLElement>('.m')) {
+      const current = Number(span.dataset.ply) === ply;
+      span.classList.toggle('current', current);
+      if (current) span.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  hideReview(): void {
+    this.review = null;
+    this.root.classList.remove('reviewing');
+    this.reviewBar.classList.add('hidden');
+    for (const span of this.moves.querySelectorAll('.current')) span.classList.remove('current');
+    this.hint.textContent = this.i18n.t.hint;
   }
 
   letterbox(on: boolean): void {
@@ -167,8 +210,8 @@ export class Hud {
     });
   }
 
-  showGameOver(result: GameResult, onRestart: () => void): void {
-    this.overlayState = { kind: 'gameOver', result, onRestart };
+  showGameOver(result: GameResult, onRestart: () => void, onReview: () => void): void {
+    this.overlayState = { kind: 'gameOver', result, onRestart, onReview };
     this.redrawOverlay();
   }
 
@@ -191,12 +234,37 @@ export class Hud {
     this.title.textContent = APP_NAME.toUpperCase();
     this.devouredTitle.textContent = t.devoured;
     this.movesTitle.textContent = t.moves;
-    this.hint.textContent = t.hint;
+    this.hint.textContent = this.review ? t.reviewHint : t.hint;
     for (const r of this.redrawControls) r();
+    this.redrawReview();
     this.redrawTurn();
     this.redrawCaptured();
     if (this.captionPiece) this.captionEl.textContent = this.i18n.becomes(this.captionPiece);
     this.redrawOverlay();
+  }
+
+  private redrawReview(): void {
+    const review = this.review;
+    if (!review) return;
+    const t = this.i18n.t;
+    this.hint.textContent = t.reviewHint;
+    const nav = (label: string, title: string, disabled: boolean, onClick: () => void) => {
+      const b = el('button', 'btn', label);
+      b.title = title;
+      b.disabled = disabled;
+      b.addEventListener('click', onClick);
+      return b;
+    };
+    const { ply, last, actions } = review;
+    const where = ply === 0 ? t.reviewStart : t.reviewMove.replace('{n}', String(ply)).replace('{total}', String(last));
+    this.reviewBar.replaceChildren(
+      nav('⏮', t.reviewNav.first, ply === 0, () => actions.jump(0)),
+      nav('◀', t.reviewNav.prev, ply === 0, () => actions.step(-1)),
+      el('span', 'review-where', where),
+      nav('▶', t.reviewNav.next, ply === last, () => actions.step(1)),
+      nav('⏭', t.reviewNav.last, ply === last, () => actions.jump(last)),
+      nav(`✕ ${t.reviewBack}`, t.reviewBack, false, () => actions.exit()),
+    );
   }
 
   private redrawTurn(): void {
@@ -247,7 +315,11 @@ export class Hud {
         this.hideOverlay();
         state.onRestart();
       });
-      card.append(again);
+      const review = el('button', 'btn', t.reviewGame);
+      review.addEventListener('click', () => state.onReview());
+      const row = el('div', 'intro-actions');
+      row.append(again, review);
+      card.append(row);
     } else {
       card.classList.add('intro');
       card.append(el('h2', 'big', APP_NAME.toUpperCase()), el('p', '', t.introTagline));

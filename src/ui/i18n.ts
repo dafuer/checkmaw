@@ -38,6 +38,13 @@ interface Dictionary {
   hint: string;
   promote: string;
   playAgain: string;
+  reviewGame: string;
+  reviewStart: string;
+  /** 'Move {n} of {total}' */
+  reviewMove: string;
+  reviewBack: string;
+  reviewHint: string;
+  reviewNav: { first: string; prev: string; next: string; last: string };
   introTagline: string;
   introStart: string;
   /** Piece name with its article, as the subject of the transformation caption. */
@@ -84,6 +91,12 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     hint: 'Click a piece, then a glowing square · Drag to orbit · Scroll to zoom · Hold SPACE to fast-forward battles',
     promote: 'Promote your pawn',
     playAgain: 'Play again',
+    reviewGame: 'Review the game',
+    reviewStart: 'Starting position',
+    reviewMove: 'Move {n} of {total}',
+    reviewBack: 'Back to the result',
+    reviewHint: '← → step through the moves · click a move in the list to jump to it',
+    reviewNav: { first: 'Start (Home)', prev: 'Previous move (←)', next: 'Next move (→)', last: 'Final position (End)' },
     introTagline: 'Two players, one board. Every capture awakens what sleeps inside the pieces.',
     introStart: 'Begin the hunt',
     piece: { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' },
@@ -133,6 +146,12 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
     hint: 'Pulsa una pieza y luego una casilla iluminada · Arrastra para girar · Rueda para acercar · Mantén ESPACIO para acelerar las batallas',
     promote: 'Corona tu peón',
     playAgain: 'Jugar otra vez',
+    reviewGame: 'Revisar la partida',
+    reviewStart: 'Posición inicial',
+    reviewMove: 'Jugada {n} de {total}',
+    reviewBack: 'Volver al resultado',
+    reviewHint: '← → para recorrer las jugadas · pulsa una jugada de la lista para saltar a ella',
+    reviewNav: { first: 'Inicio (Inicio)', prev: 'Jugada anterior (←)', next: 'Jugada siguiente (→)', last: 'Posición final (Fin)' },
     introTagline: 'Dos jugadores, un tablero. Cada captura despierta lo que duerme dentro de las piezas.',
     introStart: 'Que empiece la caza',
     piece: { p: 'El peón', n: 'El caballo', b: 'El alfil', r: 'La torre', q: 'La dama', k: 'El rey' },

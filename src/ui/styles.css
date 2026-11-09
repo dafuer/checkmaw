@@ -168,3 +168,23 @@ html, body {
   .hint { white-space: normal; width: calc(100% - 32px); text-align: center; }
   .controls { left: 16px; top: auto; bottom: 64px; right: 16px; max-width: none; justify-content: center; }
 }
+
+/* Game review: step bar above the hint and clickable moves. */
+.review {
+  left: 50%;
+  bottom: 52px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  max-width: calc(100vw - 32px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.review.hidden { display: none; }
+.review .btn:disabled { opacity: 0.35; cursor: default; }
+.review-where { min-width: 140px; text-align: center; color: var(--gold); font-variant-numeric: tabular-nums; }
+.reviewing .moves .m { cursor: pointer; }
+.reviewing .moves .m:hover { color: var(--gold); }
+.moves .m.current { background: rgba(214, 166, 74, 0.3); color: #fff; border-radius: 4px; }

@@ -21,6 +21,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 - S14 — Fewer spider walkers: "demasiadas figuras se mueves como \"una araña\". Revisa eso. Por ejemplo el alfil podría ser un soldadito (como los soldaditos de plomo). Y los peones, no se que se te ocurre, pero la animación de que comen me hace gracia."
 - S15 — Second scene: "Hay demasiadas luces y brillos. Si te parece, no lo cambies, pero añade otra opción con un fondo más alegre, por ejemplo jugando en una montaña, con una musica menos intensa y un bonito y relajante entorno."
 - S16 — Camera modes: "Añade más opciones a la camara. Solo deja auto si/no. Puede tener auto, vista libre o una serie de otras vistas precalculadas (zenital, lateral, ... lo que se te ocurra)"
+- S17 — Game review: "El final de la partida. No me has dejado revisar los pasos hacia atrás. Se terminó y lo hizo sin darme pie a entender el ultimo paso o la partida. Añade algo para revisar la partida o así."
 
 ## Tasks
 
@@ -43,6 +44,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T16 | S16 | inline | done (cameraModes unit tests; top and side views checked in Chrome) | see git log |
 | T17 | S14 | inline | pending | |
 | T18 | S15 | inline | pending | |
+| T19 | S17 | inline | done (timeline domain test; review bar, keys, move-list jump and exit checked in Chrome on a scholar's mate) | see git log |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
@@ -78,3 +80,4 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L15 (2026-11-09, user): "como continuarías? por cierto, me falta que pueda cambiarle de idioma y por defecto coja el de el pc. además, el nombre de Monster Chess no vale. Hay que encontrar un nombre que no lance resultados en Google. Algo que sea original y único." → T13 done: src/ui/i18n.ts (en/es dictionaries, detectLanguage from navigator.languages, localStorage choice), HUD redraws live incl. open dialogs, battle captions translated, title kept in APP_NAME for the rename. 39/39 tests. T14: candidates with zero exact-match web results (Checkmaw, Mawmate, Gnashmate, Escaquimera); awaiting choice.
 - L16 (2026-11-09, user): "que te parece ChessCheck? la alternativa que más me ha gustado hasta ahora es checkmaw" → advised against ChessCheck (generic phrase, prior "Chess Check" e-zine); noted Checkmaw sits near Steam's CheckMaze. User: "vamos con checkmaw." → renamed (APP_NAME, page title, README, package name).
 - L17 (2026-11-10) — User: favicon; bishop as tin soldier, pawn rethink keeping its eating; optional cheerful mountain scene with calmer music; camera modes (auto, free, presets). Plan: T15 favicon, T16 camera modes, T17 walkers (bishop figure, pawn biped gremlin), T18 mountain scene + calm music.
+- L18 (2026-11-10) — User added S17 mid-task (end-of-game review). Plan T19: game-over card offers "Review game"; step back/forward through every position with arrows and buttons, last move highlighted.

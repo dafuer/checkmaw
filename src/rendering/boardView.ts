@@ -69,6 +69,17 @@ export class BoardView {
     }
   }
 
+  /** Shows a reviewed position; when stepping forward the move that led to it slides in. */
+  async showPosition(pieces: Piece[], arriving?: { from: Square; to: Square }): Promise<void> {
+    this.sync(pieces);
+    if (!arriving) return;
+    const mover = pieces.find((p) => p.square === arriving.to);
+    const view = mover && this.views.get(mover.id);
+    if (!view) return;
+    view.root.position.copy(squareToWorld(arriving.from));
+    await this.director.moves.glide(view, squareToWorld(arriving.to), 0.35, 0.15);
+  }
+
   /** Plays a move's events in order; resolves when every animation is done. */
   async play(events: GameEvent[]): Promise<void> {
     const handledMoves = new Set<number>();

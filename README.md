@@ -34,6 +34,9 @@ Other scripts:
   move), *free* (stays where you leave it), *top* (straight down), *side*,
   *corner* (diagonal three-quarter view) and *orbit* (circles the board slowly).
   The choice is remembered.
+- When the game ends, **Review the game** steps through every position:
+  ⏮ ◀ ▶ ⏭ buttons or ← → Home End keys, click a move in the list to jump to it,
+  Escape to go back to the result. The last move and any check stay highlighted.
 
 ## Languages
 

@@ -8,6 +8,7 @@ import type {
   MoveResult,
   Piece,
   PieceType,
+  ReviewFrame,
   Square,
 } from './types';
 
@@ -54,6 +55,29 @@ export class ChessGame {
   /** Moves played so far in SAN, oldest first. */
   sanHistory(): string[] {
     return this.chess.history();
+  }
+
+  /** Every position from the start to now, each with the move that led to it. */
+  timeline(): ReviewFrame[] {
+    const moves = this.chess.history({ verbose: true });
+    const other = (c: Color): Color => (c === 'w' ? 'b' : 'w');
+    // The side to move at the start: the current one flipped once per move played.
+    let turn = moves.length % 2 === 0 ? this.chess.turn() : other(this.chess.turn());
+    const frames: ReviewFrame[] = [];
+    for (let ply = 0; ply <= moves.length; ply++) {
+      const snapshot = ply < moves.length ? this.history[ply] : { board: this.board, captured: this.capturedPieces };
+      const move = ply > 0 ? moves[ply - 1] : null;
+      frames.push({
+        ply,
+        pieces: [...snapshot.board.values()],
+        captured: [...snapshot.captured],
+        move: move ? { from: move.from, to: move.to, san: move.san } : null,
+        check: move ? /[+#]$/.test(move.san) : false,
+        turn,
+      });
+      turn = other(turn);
+    }
+    return frames;
   }
 
   isCheck(): boolean {

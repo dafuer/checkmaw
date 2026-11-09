@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ChessGame } from '../domain/game';
-import type { GameEvent, GameResult, Square } from '../domain/types';
+import type { GameEvent, GameResult, ReviewFrame, Square } from '../domain/types';
 import type { Sfx } from '../audio/sfx';
 import type { Board } from '../rendering/board';
 import type { BoardView } from '../rendering/boardView';
@@ -20,6 +20,8 @@ export class GameController {
   private busy = false;
   private cameraMode: CameraMode = 'auto';
   private lastMove: Square[] = [];
+  /** Set while the players step through a finished game. */
+  private review: { frames: ReviewFrame[]; ply: number; stepping: boolean } | null = null;
   private readonly raycaster = new THREE.Raycaster();
   private readonly pointer = new THREE.Vector2();
 
@@ -46,6 +48,18 @@ export class GameController {
       if (e.code === 'Space') {
         this.stage.animator.speed = 3.5;
         e.preventDefault();
+      }
+      if (this.review) {
+        const keys: Record<string, () => void> = {
+          ArrowLeft: () => this.reviewTo(this.review!.ply - 1),
+          ArrowRight: () => this.reviewTo(this.review!.ply + 1),
+          Home: () => this.reviewTo(0),
+          End: () => this.reviewTo(Infinity),
+          Escape: () => this.exitReview(),
+        };
+        keys[e.key]?.();
+        if (keys[e.key]) e.preventDefault();
+        return;
       }
       if (e.key === 'u' || e.key === 'U') this.undo();
     });
@@ -82,6 +96,7 @@ export class GameController {
 
   restart(fen?: string): void {
     if (this.busy) return;
+    this.leaveReview();
     this.game = new ChessGame(fen);
     this.selected = null;
     this.lastMove = [];
@@ -92,13 +107,72 @@ export class GameController {
   }
 
   undo(): void {
-    if (this.busy || !this.game.undo()) return;
+    if (this.busy || this.review || !this.game.undo()) return;
     this.selected = null;
     this.lastMove = [];
     this.hud.hideOverlay();
     this.view.sync(this.game.pieces());
     this.refresh();
     this.followTurn(0.9);
+  }
+
+  /** Steps back through the game from its final position, move by move. */
+  startReview(): void {
+    if (this.busy) return;
+    const frames = this.game.timeline();
+    this.review = { frames, ply: frames.length - 1, stepping: false };
+    this.selected = null;
+    this.hud.hideOverlay();
+    this.hud.showReview({
+      step: (delta) => this.reviewTo(this.review!.ply + delta),
+      jump: (ply) => this.reviewTo(ply),
+      exit: () => this.exitReview(),
+    });
+    this.showFrame(false);
+  }
+
+  /** Goes to a ply of the reviewed game; one step forward animates the move. */
+  reviewTo(ply: number): void {
+    const review = this.review;
+    if (!review || review.stepping) return;
+    const target = Math.max(0, Math.min(review.frames.length - 1, ply));
+    if (target === review.ply) return;
+    const forward = target === review.ply + 1;
+    review.ply = target;
+    this.showFrame(forward);
+  }
+
+  /** Leaves the review, back to the final position and the result card. */
+  exitReview(): void {
+    if (!this.review) return;
+    this.leaveReview();
+    this.view.sync(this.game.pieces());
+    this.refresh();
+    const result = this.game.status();
+    if (result) this.hud.showGameOver(result, () => this.restart(), () => this.startReview());
+  }
+
+  private leaveReview(): void {
+    if (!this.review) return;
+    this.review = null;
+    this.hud.hideReview();
+  }
+
+  private showFrame(animate: boolean): void {
+    const review = this.review!;
+    const frame = review.frames[review.ply];
+    const last = review.frames.length - 1;
+    this.hud.setTurn(frame.turn, frame.check, review.ply === last ? this.game.status() : null);
+    this.hud.setCaptured(frame.captured);
+    this.hud.setReviewPly(review.ply, last);
+    this.board.clearMarkers('selected', 'move', 'capture', 'hover');
+    this.board.setMarkers('last', frame.move ? [frame.move.from, frame.move.to] : []);
+    const king = frame.pieces.find((p) => p.type === 'k' && p.color === frame.turn);
+    this.board.setMarkers('check', frame.check && king ? [king.square] : []);
+    review.stepping = animate;
+    void this.view.showPosition(frame.pieces, animate && frame.move ? frame.move : undefined).finally(() => {
+      if (this.review === review) review.stepping = false;
+    });
   }
 
   /** Test/automation hook: plays a move as if the user clicked it. */
@@ -120,7 +194,7 @@ export class GameController {
   }
 
   private hover(e: PointerEvent): void {
-    if (this.busy) return;
+    if (this.busy || this.review) return;
     const sq = this.squareFromEvent(e);
     this.board.setMarkers('hover', sq ? [sq] : []);
     this.stage.renderer.domElement.style.cursor = sq && this.isSelectable(sq) ? 'pointer' : 'default';
@@ -133,7 +207,7 @@ export class GameController {
   }
 
   private async click(e: PointerEvent): Promise<void> {
-    if (this.busy || this.game.status()) return;
+    if (this.busy || this.review || this.game.status()) return;
     const sq = this.squareFromEvent(e);
     if (!sq) return;
     const piece = this.game.pieceAt(sq);
@@ -208,7 +282,7 @@ export class GameController {
       this.busy = false;
     }
     this.sfx.fanfare(result.winner !== null);
-    this.hud.showGameOver(result, () => this.restart());
+    this.hud.showGameOver(result, () => this.restart(), () => this.startReview());
   }
 
   private refresh(): void {
