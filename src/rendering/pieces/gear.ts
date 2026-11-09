@@ -32,9 +32,9 @@ export interface GearPose {
   lift: number;
 }
 
-type PoseTable = { rest: ArmAngles } & Partial<Record<keyof GearPose, ArmAngles>>;
+export type PoseTable = { rest: ArmAngles } & Partial<Record<keyof GearPose, ArmAngles>>;
 
-const WEAPON_ARM: PoseTable = {
+export const WEAPON_ARM: PoseTable = {
   rest: { s: -0.25, e: -1.1, w: -1.5 },
   raise: { s: -2.9, e: -0.5, w: -0.5 },
   strike: { s: -1.0, e: -0.15, w: -0.45 },
@@ -62,7 +62,7 @@ const BRUTE_ARM: PoseTable = {
   lift: { s: -2.95, e: -0.25, w: 0 },
 };
 
-const CASTER_HAND: PoseTable = {
+export const CASTER_HAND: PoseTable = {
   rest: { s: -0.3, e: -1.2, w: 0 },
   raise: { s: -2.6, e: -0.3, w: 0 },
   thrust: { s: -1.5, e: -0.1, w: 0 },
@@ -71,14 +71,14 @@ const CASTER_HAND: PoseTable = {
   guard: { s: -1.2, e: -0.6, w: 0 },
 };
 
-type Item = 'shortsword' | 'buckler' | 'greatsword' | 'kite' | 'staff' | 'hammer' | 'fist' | 'none';
+export type Item = 'shortsword' | 'buckler' | 'greatsword' | 'kite' | 'greatstaff' | 'longsword' | 'fist' | 'none';
 
-interface ArmSpec {
+export interface ArmSpec {
   table: PoseTable;
   item: Item;
 }
 
-interface GearSpec {
+export interface GearSpec {
   shoulderY: number;
   shoulderX: number;
   upper: number;
@@ -89,7 +89,10 @@ interface GearSpec {
   left: ArmSpec;
 }
 
-/** One loadout per piece type; the knight fights mounted (see mount.ts) and has no arms. */
+/**
+ * Arms for the monster forms. The knight fights mounted (see mount.ts); the
+ * queen and king become human figures with their own arms (see figure.ts).
+ */
 const GEAR: Partial<Record<PieceType, GearSpec>> = {
   p: {
     shoulderY: 0.49, shoulderX: 0.2, upper: 0.15, fore: 0.14, thickness: 0.026, splay: 0.3,
@@ -106,16 +109,6 @@ const GEAR: Partial<Record<PieceType, GearSpec>> = {
     right: { table: BRUTE_ARM, item: 'fist' },
     left: { table: BRUTE_ARM, item: 'fist' },
   },
-  q: {
-    shoulderY: 0.83, shoulderX: 0.24, upper: 0.2, fore: 0.19, thickness: 0.026, splay: 0.3,
-    right: { table: WEAPON_ARM, item: 'staff' },
-    left: { table: CASTER_HAND, item: 'none' },
-  },
-  k: {
-    shoulderY: 0.87, shoulderX: 0.25, upper: 0.22, fore: 0.21, thickness: 0.034, splay: 0.3,
-    right: { table: WEAPON_ARM, item: 'hammer' },
-    left: { table: WEAPON_ARM, item: 'none' },
-  },
 };
 
 const POSE_KEYS: Array<keyof GearPose> = ['raise', 'strike', 'draw', 'thrust', 'guard', 'grab', 'lift'];
@@ -126,10 +119,17 @@ interface Arm {
   wrist: THREE.Group;
   table: PoseTable;
   side: number;
+  item: THREE.Group;
 }
 
 export function hasGear(type: PieceType): boolean {
   return GEAR[type] !== undefined;
+}
+
+export function gearSpec(type: PieceType): GearSpec {
+  const spec = GEAR[type];
+  if (!spec) throw new Error(`No gear for piece type ${type}`);
+  return spec;
 }
 
 /**
@@ -147,12 +147,15 @@ export class Gear {
   private readonly ownMaterials: THREE.Material[] = [];
   readonly spec: GearSpec;
 
-  constructor(type: PieceType, color: Color, private readonly mats: PieceMaterials) {
-    const spec = GEAR[type];
-    if (!spec) throw new Error(`No gear for piece type ${type}`);
+  constructor(spec: GearSpec, color: Color, private readonly mats: PieceMaterials) {
     this.spec = spec;
     this.arms.push(this.buildArm(spec, spec.right, -1, color));
     this.arms.push(this.buildArm(spec, spec.left, 1, color));
+  }
+
+  /** The group holding the right (0) or left (1) hand's item, to show or hide it. */
+  item(arm: 0 | 1): THREE.Group {
+    return this.arms[arm].item;
   }
 
   /** World position of the weapon tip (or the right hand when unarmed). */
@@ -184,6 +187,8 @@ export class Gear {
       arm.shoulder.rotation.x = s;
       arm.elbow.rotation.x = e;
       arm.wrist.rotation.x = w;
+      const spin = arm.item.userData.spin as THREE.Object3D[] | undefined;
+      spin?.forEach((o, i) => (o.rotation.x = time * (i ? 1.3 : -1.7)));
     }
   }
 
@@ -222,10 +227,14 @@ export class Gear {
     elbow.add(wrist);
     // Correct the splay so held items stay in the vertical plane.
     wrist.rotation.z = -side * spec.splay * 0.5;
-    this.buildItem(armSpec.item, wrist, spec, color, side);
+    const fist = new THREE.Mesh(new THREE.SphereGeometry(spec.thickness * 1.25, 10, 8), this.mats.carapace);
+    wrist.add(fist);
+    const item = new THREE.Group();
+    wrist.add(item);
+    this.buildItem(armSpec.item, item, fist, color, side);
 
     this.group.add(shoulder);
-    return { shoulder, elbow, wrist, table: armSpec.table, side };
+    return { shoulder, elbow, wrist, table: armSpec.table, side, item };
   }
 
   private glowMaterial(color: Color, intensity: number): THREE.MeshStandardMaterial {
@@ -245,9 +254,7 @@ export class Gear {
     return mat;
   }
 
-  private buildItem(item: Item, hand: THREE.Group, spec: GearSpec, color: Color, side: number): void {
-    const fist = new THREE.Mesh(new THREE.SphereGeometry(spec.thickness * 1.25, 10, 8), this.mats.carapace);
-    hand.add(fist);
+  private buildItem(item: Item, hand: THREE.Group, fist: THREE.Mesh, color: Color, side: number): void {
     switch (item) {
       case 'shortsword':
         this.buildBlade(hand, color, 0.3, 0.032, 0.1, false);
@@ -282,36 +289,39 @@ export class Gear {
         hand.add(plate, crossV, crossH);
         break;
       }
-      case 'staff': {
-        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.95, 8), this.mats.accent);
-        rod.position.y = -0.2;
-        const orb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(TEAM_GLOW[color]).multiplyScalar(2.4) }));
-        this.ownMaterials.push(orb.material as THREE.Material);
-        orb.position.y = -0.7;
-        const cage = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.008, 6, 20), this.mats.accent);
-        cage.position.y = -0.7;
-        const cage2 = cage.clone();
-        cage2.rotation.y = Math.PI / 2;
-        hand.add(rod, orb, cage, cage2);
-        this.tipAnchor.position.y = -0.7;
+      case 'greatstaff': {
+        // A tall sceptre-staff: crystal star on top, gold rings and ribbons.
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 1.25, 10), this.mats.accent);
+        rod.position.y = -0.3;
+        const crystalMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          emissive: new THREE.Color(TEAM_GLOW[color]),
+          emissiveIntensity: 3,
+          roughness: 0.1,
+          metalness: 0.2,
+        });
+        this.ownMaterials.push(crystalMat);
+        const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.075, 0), crystalMat);
+        crystal.scale.set(0.8, 1.5, 0.8);
+        crystal.position.y = -1.02;
+        const halo = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.01, 6, 28), this.mats.accent);
+        halo.position.y = -1.02;
+        const halo2 = halo.clone();
+        halo2.rotation.y = Math.PI / 2;
+        const crescent = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.014, 6, 20, Math.PI), this.mats.accent);
+        crescent.position.y = -0.9;
+        crescent.rotation.z = Math.PI;
+        const foot = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.08, 8), this.mats.accent);
+        foot.position.y = 0.36;
+        hand.add(rod, crystal, halo, halo2, crescent, foot);
+        hand.userData.spin = [halo, halo2];
+        this.tipAnchor.position.y = -1.02;
         hand.add(this.tipAnchor);
         break;
       }
-      case 'hammer': {
-        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.7, 8), this.mats.carapace);
-        handle.position.y = -0.22;
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.17), this.mats.accent);
-        head.position.y = -0.58;
-        const rune = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.04, 0.18), this.glowMaterial(color, 2.5));
-        rune.position.y = -0.58;
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.14, 6), this.steelMaterial());
-        spike.position.y = -0.72;
-        spike.rotation.x = Math.PI;
-        hand.add(handle, head, rune, spike);
-        this.tipAnchor.position.y = -0.6;
-        hand.add(this.tipAnchor);
+      case 'longsword':
+        this.buildBlade(hand, color, 0.6, 0.04, 0.16, true);
         break;
-      }
       case 'fist': {
         fist.scale.setScalar(1.5);
         const steel = this.steelMaterial();

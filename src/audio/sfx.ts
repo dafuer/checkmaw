@@ -190,6 +190,25 @@ export class Sfx {
     this.tone(160, 0.3, 'square', 0.12, 50);
   }
 
+  /** Sword leaving its scabbard: a rising metallic ring. */
+  unsheathe(): void {
+    this.noise(0.35, 0.25, 5000, 'highpass');
+    this.tone(900, 0.5, 'triangle', 0.08, 2600);
+    this.tone(1800, 0.6, 'sine', 0.05, 3400, 0.05);
+  }
+
+  /** Sword sliding home: a short scrape and click. */
+  sheathe(): void {
+    this.noise(0.2, 0.2, 3500, 'bandpass');
+    this.tone(2400, 0.06, 'square', 0.06, 1800, 0.18);
+  }
+
+  /** A soft glittering chime (the queen's footsteps). */
+  shimmer(): void {
+    const f = 1800 + Math.random() * 1600;
+    this.tone(f, 0.35, 'sine', 0.025, f * 1.5);
+  }
+
   private startDrone(): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || this.droneStarted) return;

@@ -15,7 +15,7 @@ export interface BattleHooks {
 const PIECE_NAMES: Record<string, string> = { p: 'Pawn', n: 'Knight', b: 'Bishop', r: 'Rook', q: 'Queen', k: 'King' };
 
 /** How close each attacker stands before striking (weapon reach). */
-const REACH: Record<string, number> = { p: 0.6, n: 0, b: 0.95, r: 0.62, q: 1.5, k: 0.85 };
+const REACH: Record<string, number> = { p: 0.6, n: 0, b: 0.95, r: 0.62, q: 1.7, k: 0.8 };
 
 /** Pieces with a shield block the victim's counter-attack; the others flinch. */
 const HAS_SHIELD = new Set(['p', 'b']);
@@ -25,7 +25,9 @@ const HAS_SHIELD = new Set(['p', 'b']);
  * own weapon and finishing move:
  * pawn – sword combo and a gulp, knight – lance joust, bishop – great-sword
  * cleave that cuts the victim in two, rook – grab, lift and slam flat, queen –
- * lightning and tentacles, king – war-hammer smash into an abyss portal.
+ * a radiant lady whose great staff calls lightning and crystallises the victim,
+ * king – a lord who draws his sword, cuts through the victim and sheathes it
+ * as the victim falls in two.
  * Every beat is an awaited tween, so it reads top-to-bottom and respects the
  * animator speed.
  */
@@ -141,7 +143,8 @@ export class BattleDirector {
       });
     }
     await this.transform(winner);
-    await this.moves.pose(winner, { lift: 1 }, 0.5, ease.outBack);
+    await this.moves.drawSword(winner);
+    await this.moves.pose(winner, { guard: 0, lift: 1 }, 0.5, ease.outBack);
     this.particles.sparksAt(winner.weaponTip(), { count: 120, color: TEAM_GLOW[winner.color], speed: 3, life: 1.2 });
     void this.stage.pulseBloom(1.6, 0.6);
     this.stage.controls.enabled = true;
@@ -225,6 +228,24 @@ export class BattleDirector {
     void this.stage.pulseBloom(1.8, 0.6);
     this.sfx.impact();
 
+    if (piece.figure) {
+      await this.moves.comeAlive(piece, 0.8);
+      if (piece.type === 'q') {
+        // She lifts her staff and the crystal flares.
+        await this.moves.pose(piece, { raise: 0.85 }, 0.45, ease.outBack);
+        this.sfx.magic();
+        this.particles.sparksAt(piece.weaponTip(), { count: 80, color: glow, speed: 2.5, life: 0.9 });
+        void this.stage.pulseBloom(1.6, 0.5);
+        await this.anim.wait(0.5);
+        await this.moves.restPose(piece, 0.35);
+      } else {
+        // He squares his shoulders, cape billowing, hand on the hilt.
+        await this.anim.tween(0.8, (t) => (piece.gait = Math.sin(t * Math.PI) * 0.35), ease.inOutQuad);
+        piece.gait = 0;
+      }
+      return;
+    }
+
     if (piece.type === 'n') {
       await this.anim.tween(0.7, (t) => (piece.mounted = t), ease.outElastic);
       this.sfx.neigh();
@@ -279,16 +300,33 @@ export class BattleDirector {
         this.anim.tween(0.6, (t) => (victim.rear = Math.sin(t * Math.PI)), ease.inOutQuad),
         this.anim.wait(0.3).then(() => this.flinch(attacker)),
       ]);
+    } else if (victim.type === 'q') {
+      // The lady answers with a bolt from her staff.
+      await this.moves.comeAlive(victim, 0.45);
+      await this.moves.pose(victim, { thrust: 1 }, 0.25, ease.outBack);
+      this.sfx.zap();
+      const blocked = HAS_SHIELD.has(attacker.type);
+      if (blocked) void this.moves.pose(attacker, { guard: 1 }, 0.1, ease.outQuad);
+      const hit = attacker.root.position.clone().setY(attacker.body.position.y + attacker.height * 0.5);
+      await this.fx.lightning(victim.weaponTip(), hit, TEAM_GLOW[victim.color], 0.2);
+      this.particles.sparksAt(hit, { count: 40, color: blocked ? 0xffd27a : TEAM_GLOW[victim.color], speed: 3, life: 0.5 });
+      if (!blocked) void this.flinch(attacker);
+      await Promise.all([this.moves.restPose(victim, 0.3), blocked ? this.moves.pose(attacker, { guard: 0 }, 0.3) : Promise.resolve()]);
     } else {
-      await this.anim.tween(0.45, (t) => {
-        victim.monster = t * 0.75;
-        victim.armed = t;
-        victim.body.rotation.z = Math.sin(t * 50) * 0.05;
-      }, ease.outBack);
-      victim.body.rotation.z = 0;
+      if (victim.figure) {
+        await this.moves.comeAlive(victim, 0.45);
+        await this.moves.drawSword(victim);
+      } else {
+        await this.anim.tween(0.45, (t) => {
+          victim.monster = t * 0.75;
+          victim.armed = t;
+          victim.body.rotation.z = Math.sin(t * 50) * 0.05;
+        }, ease.outBack);
+        victim.body.rotation.z = 0;
+      }
       // Counter-attack.
       const start = victim.root.position.clone();
-      await this.moves.pose(victim, { raise: 0.8 }, 0.22, ease.outQuad);
+      await this.moves.pose(victim, { raise: 0.8, guard: 0 }, 0.22, ease.outQuad);
       this.sfx.slash();
       const blocked = HAS_SHIELD.has(attacker.type);
       await Promise.all([
@@ -318,18 +356,20 @@ export class BattleDirector {
       ]);
     }
     // Fear: trembling.
+    const shaking = victim.figure?.group ?? victim.body;
     const stopTremble = this.anim.every(() => {
-      victim.body.rotation.z = Math.sin(this.anim.now * 70) * 0.025;
+      shaking.rotation.z = Math.sin(this.anim.now * 70) * 0.025;
       return false;
     });
     victim.root.userData.stopTremble = stopTremble;
   }
 
   private async flinch(piece: PieceView): Promise<void> {
+    const target = piece.figure?.group ?? piece.body;
     await this.anim.tween(0.3, (t) => {
-      piece.body.rotation.x = -Math.sin(t * Math.PI) * 0.25;
+      target.rotation.x = -Math.sin(t * Math.PI) * 0.25;
     }, ease.outQuad);
-    piece.body.rotation.x = 0;
+    target.rotation.x = 0;
   }
 
   private stopTremble(victim: PieceView): void {
@@ -337,6 +377,7 @@ export class BattleDirector {
     stop?.();
     victim.root.userData.stopTremble = undefined;
     victim.body.rotation.z = 0;
+    if (victim.figure) victim.figure.group.rotation.z = 0;
   }
 
   /** The victim reels from a hit. */
@@ -654,104 +695,121 @@ export class BattleDirector {
     await this.swallow(a, v);
   }
 
-  /** Queen: levitates, calls lightning down her staff, then the tentacles feed. */
+  /** Queen: three bolts from her great staff, then a pillar of light crystallises the victim and it shatters. */
   private async sorcery(a: PieceView, v: PieceView): Promise<void> {
     const glow = TEAM_GLOW[a.color];
-    a.airborne = true;
     this.sfx.magic();
+    // She rises a little, her gown and the crystal shining.
     await Promise.all([
-      this.anim.tween(0.5, (t) => (a.hop = t * 0.35), ease.outBack),
+      this.anim.tween(0.5, (t) => (a.hop = t * 0.18), ease.outBack),
       this.moves.pose(a, { thrust: 1 }, 0.5, ease.outBack),
     ]);
-    this.stopTremble(v);
-    const charred = new THREE.Color(0x0c0a08);
-    for (let i = 0; i < 3; i++) {
-      this.sfx.zap();
-      const target = v.root.position.clone().setY(v.root.position.y + v.height * (0.4 + Math.random() * 0.3));
-      void this.fx.lightning(a.weaponTip(), target, glow, 0.25);
-      void this.stage.pulseBloom(1.5, 0.25);
-      this.stage.addShake(0.3);
-      this.hitSparks(target, v, 30);
-      v.mats.body.color.lerp(charred, 0.35);
-      await this.anim.tween(0.3, (t) => {
-        v.body.rotation.z = Math.sin(t * 50) * 0.15 * (1 - t);
-        v.setGlow((1 - t) * 2);
-      });
-      await this.anim.wait(0.08);
-    }
-    v.body.rotation.z = 0;
-    // Tentacles seize the smoking victim.
-    this.sfx.growl(0.9, 110);
-    await Promise.all([
-      this.moves.pose(a, { thrust: 0, lift: 0.6 }, 0.4),
-      this.anim.tween(0.45, (t) => {
-        a.tentacleReach = t;
-        a.mouth = 0.4 + t * 0.6;
-      }, ease.outBack),
-    ]);
-    const start = v.root.position.clone();
-    await this.anim.tween(0.6, (t) => {
-      v.root.position.copy(start).add(new THREE.Vector3(Math.sin(t * 30) * 0.05 * t, t * 1.0, 0));
-      v.root.rotation.z = Math.sin(t * 22) * 0.4 * t;
-    }, ease.outCubic);
-    await Promise.all([
-      this.anim.tween(0.5, (t) => (a.tentacleReach = 1 - t), ease.inOutCubic),
-      this.pullIntoMouth(a, v, 0.5, 0.2, 2),
-    ]);
-    v.root.rotation.z = 0;
-    await this.chompLoop(a, v, 2);
-    await this.swallow(a, v);
-    await Promise.all([
-      this.anim.tween(0.4, (t) => (a.hop = 0.35 * (1 - t)), ease.inOutQuad),
-      this.moves.restPose(a, 0.4),
-    ]);
-    a.airborne = false;
-  }
-
-  /** King: opens an abyss under the victim and hammers it down into the dark. */
-  private async execute(a: PieceView, v: PieceView): Promise<void> {
-    const glow = TEAM_GLOW[a.color];
-    const V = v.root.position.clone();
-    const portal = this.fx.portal(V, glow, 0.42);
-    this.sfx.magic();
-    this.sfx.growl(1.0, 50);
-    await Promise.all([portal.open, this.moves.pose(a, { raise: 1 }, 0.6, ease.outBack)]);
-    this.stopTremble(v);
-    // The victim kneels.
-    await this.anim.tween(0.35, (t) => {
-      v.body.rotation.x = t * 0.45;
-      v.root.position.y = -t * 0.08;
-    }, ease.outQuad);
-    const charge = this.anim.every(() => {
-      this.particles.sparksAt(a.weaponTip(), { count: 4, color: glow, speed: 0.8, life: 0.4, gravity: -1 });
+    const hover = this.anim.every(() => {
+      a.hop = 0.18 + Math.sin(this.anim.now * 3) * 0.03;
       return false;
     });
-    await this.anim.wait(0.45);
-    charge();
-    // Jump and smash.
-    this.sfx.whoosh();
-    a.airborne = true;
-    await this.anim.tween(0.25, (t) => (a.hop = Math.sin(t * Math.PI * 0.5) * 0.35), ease.outQuad);
-    await Promise.all([
-      this.moves.pose(a, { raise: 0, strike: 1 }, 0.14, ease.inCubic),
-      this.anim.tween(0.14, (t) => (a.hop = 0.35 * (1 - t)), ease.inQuad),
-    ]);
-    a.airborne = false;
-    a.hop = 0;
-    this.sfx.impact();
+    this.stopTremble(v);
+    for (let i = 0; i < 3; i++) {
+      this.sfx.zap();
+      const target = this.centerOf(v).add(new THREE.Vector3(0, (Math.random() - 0.5) * 0.3, 0));
+      void this.fx.lightning(a.weaponTip(), target, glow, 0.25);
+      void this.stage.pulseBloom(1.5, 0.25);
+      this.stage.addShake(0.25);
+      this.hitSparks(target, v, 30);
+      await Promise.all([this.stagger(v, a.root.position, 0.05), this.anim.wait(0.3)]);
+    }
+    // Staff to the sky: a pillar of light turns the victim to crystal.
+    await this.moves.pose(a, { thrust: 0, raise: 1 }, 0.4, ease.outBack);
+    this.sfx.magic();
+    const top = v.root.position.clone().setY(4);
+    const centre = this.centerOf(v);
+    for (let i = 0; i < 3; i++) void this.fx.lightning(top.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.3, 0, (Math.random() - 0.5) * 0.3)), centre, glow, 0.5);
+    this.sfx.zap();
+    void this.stage.pulseBloom(2.2, 0.7);
+    this.stage.addShake(0.5);
+    const crystal = new THREE.Color(glow).lerp(new THREE.Color(0xffffff), 0.5);
+    const startColor = v.mats.body.color.clone();
+    await this.anim.tween(0.7, (t) => {
+      v.mats.body.color.copy(startColor).lerp(crystal, t);
+      v.setGlow(t * 1.6);
+      v.mats.body.roughness = 0.3 * (1 - t);
+      v.root.scale.setScalar(1 + t * 0.06);
+    }, ease.inOutQuad);
+    // A tap of the staff and it shatters.
+    await this.moves.pose(a, { raise: 0, strike: 1 }, 0.18, ease.inCubic);
+    hover();
+    this.sfx.clang();
+    const at = this.centerOf(v);
+    this.particles.shatter(at, crystal, 50, 2.6, v.height * 0.6);
+    this.particles.sparksAt(at, { count: 160, color: glow, speed: 3.5, life: 1.1, drag: 1.2 });
+    this.particles.sparksAt(at, { count: 60, color: 0xffffff, speed: 2, life: 0.8 });
     this.sfx.crack();
-    this.stage.addShake(1);
-    void this.stage.pulseBloom(2.2, 0.6);
-    void this.fx.shockwave(V, glow, 2.6, 0.7);
-    this.hitSparks(v.root.position.clone().setY(v.height * 0.8), v, 80);
-    // Driven down into the abyss.
-    await this.anim.tween(0.9, (t) => {
-      v.root.position.y = -0.08 - t * (v.height + 0.4);
-      v.root.rotation.y += 0.25;
-      v.body.rotation.x = 0.45 * (1 - t);
-    }, ease.inCubic);
+    this.stage.addShake(0.4);
     v.root.visible = false;
-    this.particles.sparksAt(V.clone().setY(0.05), { count: 80, color: glow, speed: 2.5, life: 0.9, gravity: -2, direction: new THREE.Vector3(0, 1, 0), cone: 0.4 });
-    await Promise.all([portal.close(), this.moves.restPose(a, 0.4)]);
+    await Promise.all([
+      this.anim.tween(0.45, (t) => (a.hop = 0.18 * (1 - t)), ease.inOutQuad),
+      this.moves.restPose(a, 0.45),
+    ]);
+    a.hop = 0;
+  }
+
+  /** King: draws his sword, cuts straight through the victim, sheathes it — and the victim falls in two. */
+  private async execute(a: PieceView, v: PieceView): Promise<void> {
+    const glow = TEAM_GLOW[a.color];
+    await this.moves.drawSword(a);
+    this.sfx.growl(0.5, 90);
+    await this.anim.wait(0.35);
+    this.stopTremble(v);
+    // The dash: through and past the victim in one stroke.
+    const V = v.root.position.clone();
+    const start = a.root.position.clone();
+    const fwd = V.clone().sub(start).setY(0).normalize();
+    const beyond = V.clone().addScaledVector(fwd, 0.75);
+    this.sfx.whoosh();
+    this.sfx.slash();
+    const cutHeight = this.centerOf(v).y;
+    void this.fx.slashArc(V.clone().setY(cutHeight), a.root.rotation.y, glow, false, 0.45);
+    await Promise.all([
+      this.moves.pose(a, { guard: 0, thrust: 1 }, 0.12, ease.outCubic),
+      this.anim.tween(0.28, (t) => {
+        a.root.position.lerpVectors(start, beyond, t);
+        a.gait = 1;
+        a.gaitPhase += 0.6;
+      }, ease.outCubic),
+    ]);
+    a.gait = 0;
+    this.particles.sparksAt(V.clone().setY(cutHeight), { count: 50, color: glow, speed: 2.5, life: 0.5, spread: new THREE.Vector3(0.3, 0, 0.3) });
+    // Stillness... then the sword slides home.
+    await this.anim.wait(0.5);
+    await this.moves.sheatheSword(a);
+    // The cut lets go: the top half slides off.
+    v.borrowLight(null);
+    this.stage.scene.add(this.lights[1]);
+    v.body.rotation.set(0, 0, 0);
+    v.root.updateMatrixWorld(true);
+    const localCut = v.root.worldToLocal(new THREE.Vector3(V.x, cutHeight, V.z)).y;
+    const cut = this.fx.split(v.root, new THREE.Vector3(0, 1, 0), localCut);
+    v.root.visible = false;
+    const [upper] = cut.halves;
+    const u0 = upper.position.clone();
+    const u0rot = upper.rotation.clone();
+    this.sfx.crack();
+    this.particles.sparksAt(V.clone().setY(cutHeight), { count: 60, color: TEAM_GLOW[v.color], speed: 1.5, life: 0.7, spread: new THREE.Vector3(0.4, 0, 0.4) });
+    await this.anim.tween(0.8, (t) => {
+      upper.position.copy(u0).addScaledVector(fwd, t * 0.35);
+      upper.position.y = u0.y - t * t * 0.25;
+      upper.rotation.set(u0rot.x + t * 0.5 * fwd.z, u0rot.y, u0rot.z - t * 0.5 * fwd.x);
+    }, ease.inQuad);
+    this.stage.addShake(0.4);
+    this.sfx.impact();
+    for (const h of cut.halves) this.particles.shatter(h.position.clone().setY(0.2), v.mats.body.color, 18, 1.5, 0.3);
+    await this.anim.wait(0.1);
+    cut.dispose();
+    await this.moves.turn(a, a.faceTowards(V.x, V.z), 0.4);
+  }
+
+  /** World-space centre of a piece's visible shape. */
+  private centerOf(piece: PieceView): THREE.Vector3 {
+    return new THREE.Box3().setFromObject(piece.root).getCenter(new THREE.Vector3());
   }
 }

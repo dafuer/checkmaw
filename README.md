@@ -34,8 +34,9 @@ Other scripts:
 
 ## The monsters
 
-Every capture is a short duel. Each piece type has its own monster form,
-weapon and finishing move:
+Every capture is a short duel. Pawns, knights, bishops and rooks turn into
+monsters; the queen and king come alive as a lady and a lord instead. Each
+type has its own weapon and finishing move:
 
 | Piece | Monster | Arsenal | Finishing move |
 |-------|---------|---------|----------------|
@@ -43,16 +44,17 @@ weapon and finishing move:
 | Knight | Night Mare | War horse, armoured rider, lance | Backs off, charges, impales the victim and flings it into the air |
 | Bishop | Grave Paladin | Glowing great sword and kite shield | Charges the blade and cleaves the victim in two |
 | Rook | Tower Brute | Huge fists, stomping legs | Grabs the victim, lifts it overhead, slams it flat and eats the pancake |
-| Queen | Hydra Regina | Staff and tentacles | Levitates, strikes with lightning, then the tentacles feed |
-| King | Abyss King | War hammer | Opens an abyss under the victim and hammers it down into it |
+| Queen | The Radiant Lady | A dazzling lady in a gown and tiara with a great crystal staff | Three bolts from the staff, then a pillar of light turns the victim to crystal and a tap of the staff shatters it |
+| King | The Sovereign | A lord with crown, cape and a sword at his belt | Draws only to attack: cuts straight through the victim, sheathes the sword, and the victim falls in two |
 
 The victim fights back first with its own weapon; pawns and bishops block the
 blow with their shields.
 
 Ordinary moves are animated too (the **Walks** toggle): the knight mounts its
 horse and gallops along the L, the rook stomps across as a giant brute that
-shakes the board, the queen floats, and the other pieces march with their
-weapons.
+shakes the board, the queen glides in her gown leaving a trail of light, the
+king strides with his cape flowing and his sword sheathed, and the other
+pieces march with their weapons.
 
 ## Architecture
 
@@ -65,9 +67,10 @@ src/
     board.ts       board, frame, arena, braziers, embers, square markers
     boardView.ts   one PieceView per domain piece; plays domain events as animations
     pieces/        procedural lathe pieces that split at the "mouth" into monsters,
-                   plus gear (arms and weapons) and the knight's mount
+                   plus gear (arms and weapons), the knight's mount and the
+                   queen/king figures
     battle/        BattleDirector (capture duels) and Locomotion (walk, stomp, float, gallop)
-    effects/       pooled shards and sparks; Fx: lightning, shockwaves, slash arcs, portals, cutting in two
+    effects/       pooled shards and sparks; Fx: lightning, shockwaves, slash arcs, cutting in two
     animation/     promise-based tween timeline (respects fast-forward speed)
   audio/         Web Audio procedural sound effects
   ui/            HUD overlay (DOM + CSS)
@@ -89,7 +92,7 @@ reacts to those events, so rules and visuals can evolve independently.
 ## Swapping in real 3D models later
 
 Pieces are built in `src/rendering/pieces/pieceView.ts`. Every monster feature is a
-0..1 parameter (`monster`, `mouth`, `armed`, `mounted`, `rear`, `tongueOut`,
+0..1 parameter (`monster`, `mouth`, `armed`, `mounted`, `avatar`, `rear`, `tongueOut`,
 `tentacleReach`, `gait`, plus named gear pose weights such as `raise` and `strike`), so a
 glTF model with equivalent animations can replace the procedural one behind the
 same interface without touching the battle director.

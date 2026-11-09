@@ -72,51 +72,20 @@ export class Fx {
     mat.dispose();
   }
 
-  /** A glowing hole in the floor; call the returned function to close and remove it. */
-  portal(at: THREE.Vector3, color: THREE.ColorRepresentation, radius = 0.45): { open: Promise<void>; close: () => Promise<void> } {
-    const group = new THREE.Group();
-    group.position.copy(at).setY(0.012);
-    const holeGeo = new THREE.CircleGeometry(radius, 40);
-    holeGeo.rotateX(-Math.PI / 2);
-    const holeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const ringGeo = new THREE.RingGeometry(radius, radius * 1.15, 40);
-    ringGeo.rotateX(-Math.PI / 2);
-    const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.position.y = 0.002;
-    group.add(new THREE.Mesh(holeGeo, holeMat), ring);
-    group.scale.setScalar(0.001);
-    this.scene.add(group);
-    const spin = this.anim.every((dt) => {
-      ring.rotation.y += dt * 3;
-      ringMat.opacity = 0.75 + Math.sin(this.anim.now * 12) * 0.25;
-      return false;
-    });
-    const open = this.anim.tween(0.5, (t) => group.scale.setScalar(Math.max(0.001, t)), ease.outBack);
-    const close = async () => {
-      await this.anim.tween(0.4, (t) => group.scale.setScalar(Math.max(0.001, 1 - t)), ease.inBack);
-      spin();
-      this.scene.remove(group);
-      holeGeo.dispose();
-      ringGeo.dispose();
-      holeMat.dispose();
-      ringMat.dispose();
-    };
-    return { open, close };
-  }
-
   /**
-   * Cuts an object in two along its local YZ plane: returns two clipped copies
-   * that can be animated independently. The source should be hidden by the caller.
+   * Cuts an object in two along a plane given in its local space (normal and
+   * distance from its origin): returns two clipped copies that can be animated
+   * independently, the first on the normal's side. The source should be hidden
+   * by the caller.
    */
-  split(source: THREE.Object3D): { halves: [THREE.Object3D, THREE.Object3D]; dispose: () => void } {
+  split(source: THREE.Object3D, normal = new THREE.Vector3(1, 0, 0), offset = 0): { halves: [THREE.Object3D, THREE.Object3D]; dispose: () => void } {
     source.updateMatrixWorld(true);
     const materials: THREE.Material[] = [];
     const ticker: Array<() => void> = [];
     const makeHalf = (side: number): THREE.Object3D => {
       const half = source.clone(true);
       half.visible = true;
-      const local = new THREE.Plane(new THREE.Vector3(side, 0, 0), 0);
+      const local = new THREE.Plane(normal.clone().multiplyScalar(side), -offset * side);
       const world = new THREE.Plane();
       half.traverse((o) => {
         const mesh = o as THREE.Mesh;

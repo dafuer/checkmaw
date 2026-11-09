@@ -19,6 +19,12 @@ export function openLab(stage: Stage, view: BoardView, monster: boolean): void {
       p.mouth = monster ? 0.85 : 0;
       p.tentacleReach = 0;
       p.armed = monster ? 1 : 0;
+      if ((t === 'q' || t === 'k') && monster) {
+        // The queen and king come alive as a lady and a lord.
+        p.monster = 0;
+        p.mouth = 0;
+        p.avatar = 1;
+      }
       if (t === 'n' && monster) {
         // The knight's battle form is a mounted rider, not a spider.
         p.monster = 0;

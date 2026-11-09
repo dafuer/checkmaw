@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Color, PieceType } from '../../domain/types';
-import { Gear, hasGear } from './gear';
+import { Figure } from './figure';
+import { Gear, gearSpec, hasGear } from './gear';
 import { createMaterials, TEAM_GLOW, type PieceMaterials } from './materials';
 import { Mount, REAR_PIVOT_Z } from './mount';
 import { radiusAt, SHAPES, splitProfile, type MonsterTraits, type Point } from './profiles';
@@ -69,8 +70,10 @@ export class PieceView {
   /** Borrowed from a shared pool only while fighting (lights are costly per shader). */
   private gulletLight: THREE.PointLight | null = null;
   private readonly mouthRadius: number;
-  /** Arms and weapons (every type except the knight). */
+  /** Arms and weapons: the monster's (pawn, bishop, rook) or the figure's (queen, king). */
   readonly gear: Gear | null = null;
+  /** The queen and king come alive as a lady and a lord instead of monsters. */
+  readonly figure: Figure | null = null;
   /** The knight's horse and rider. */
   readonly mount: Mount | null = null;
   private readonly knightBase: THREE.Object3D[] = [];
@@ -90,6 +93,15 @@ export class PieceView {
 
   set armed(v: number) {
     if (this.gear) this.gear.out = v;
+  }
+
+  /** 0..1 queen or king transformed into a living figure. */
+  get avatar(): number {
+    return this.figure?.amount ?? 0;
+  }
+
+  set avatar(v: number) {
+    if (this.figure) this.figure.amount = v;
   }
 
   /** 0..1 knight transformed into a mounted rider. */
@@ -140,8 +152,13 @@ export class PieceView {
     if (this.traits.horns > 0) this.buildHorns();
     if (this.traits.tongue > 0) this.buildTongue();
     if (hasGear(type)) {
-      this.gear = new Gear(type, color, this.mats);
+      this.gear = new Gear(gearSpec(type), color, this.mats);
       this.lower.add(this.gear.group);
+    }
+    if (type === 'q' || type === 'k') {
+      this.figure = new Figure(type, color, this.mats);
+      this.gear = this.figure.gear;
+      this.rig.add(this.figure.group);
     }
     if (type === 'n') {
       this.mount = new Mount(color, this.mats);
@@ -223,6 +240,12 @@ export class PieceView {
     this.body.position.y = lift + this.hop + Math.max(0, breathe);
     this.body.scale.set((1 + m * 0.08 + breathe) * bulk, (1 + m * 0.12 - breathe) * bulk, (1 + m * 0.08 + breathe) * bulk);
     if (this.mount) this.applyMount(t);
+    if (this.figure) {
+      // The chess piece shrinks away as the figure rises out of it.
+      const a = this.figure.amount;
+      this.body.scale.multiplyScalar(Math.max(0.0001, 1 - a));
+      this.body.visible = a < 0.98;
+    }
 
     // Jaw: idle monsters chatter slightly.
     const chatter = m > 0.5 ? Math.max(0, Math.sin(t * 13)) * 0.05 * m : 0;
@@ -245,7 +268,8 @@ export class PieceView {
     this.updateLegs(lift);
     this.updateChains(t);
     for (const horn of this.horns) horn.scale.setScalar(Math.max(0.0001, m));
-    this.gear?.apply(t, this.gait, this.gaitPhase);
+    if (this.figure) this.figure.apply(t, this.gait, this.gaitPhase, this.hop);
+    else this.gear?.apply(t, this.gait, this.gaitPhase);
   }
 
   /** The knight piece becomes the horse's head in front of the barrel. */
@@ -274,7 +298,8 @@ export class PieceView {
       if (mesh.isMesh) mesh.geometry.dispose();
     });
     for (const mat of Object.values(this.mats)) (mat as THREE.Material).dispose();
-    this.gear?.dispose();
+    if (this.figure) this.figure.dispose();
+    else this.gear?.dispose();
     this.mount?.dispose();
   }
 
@@ -289,6 +314,8 @@ export class PieceView {
     this.tentacleReach = 0;
     this.armed = 0;
     this.mounted = 0;
+    this.avatar = 0;
+    if (this.figure) this.figure.drawn = 0;
     this.rear = 0;
     if (this.mount) {
       this.mount.gallop = 0;

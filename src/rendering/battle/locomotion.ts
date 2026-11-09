@@ -15,8 +15,8 @@ export function angleLerp(a: number, b: number, t: number): number {
 
 const DUST = 0xb59a7a;
 
-/** How strongly each piece type transforms just to walk across the board. */
-const MARCH_LEVEL: Record<string, number> = { p: 0.8, b: 0.85, r: 1, q: 0.85, k: 0.9 };
+/** How strongly each monster type transforms just to walk across the board. */
+const MARCH_LEVEL: Record<string, number> = { p: 0.8, b: 0.85, r: 1 };
 
 /**
  * How pieces get around: walking (spider legs), stomping (the rook brute),
@@ -63,7 +63,10 @@ export class Locomotion {
     await this.turn(piece, piece.faceTowards(to.x, to.z), 0.25);
     const heavy = piece.type === 'r';
     const floating = piece.airborne;
-    const stride = heavy ? 7 : 11;
+    // The lady glides in her gown; the lord walks with long strides.
+    const gliding = piece.avatar > 0.5 && piece.type === 'q';
+    const striding = piece.avatar > 0.5 && piece.type === 'k';
+    const stride = heavy ? 7 : striding ? 8 : 11;
     let lastStep = 0;
     const glow = TEAM_GLOW[piece.color];
     await this.anim.tween(dist / (heavy ? speed * 0.7 : speed), (t) => {
@@ -75,10 +78,17 @@ export class Locomotion {
       }
       piece.gait = Math.min(1, Math.sin(t * Math.PI) * 3);
       piece.gaitPhase = t * dist * stride;
+      if (gliding && Math.random() < 0.6) {
+        this.particles.sparksAt(piece.root.position.clone().setY(0.05 + Math.random() * 0.4), { count: 2, color: TEAM_GLOW[piece.color], speed: 0.3, life: 0.8, gravity: -0.4 });
+      }
       if (heavy) piece.body.rotation.z = Math.sin(piece.gaitPhase) * 0.12 * piece.gait;
       if (piece.gaitPhase - lastStep > Math.PI) {
         lastStep = piece.gaitPhase;
-        if (heavy) {
+        if (gliding) {
+          this.sfx.shimmer();
+        } else if (striding) {
+          this.sfx.step();
+        } else if (heavy) {
           this.sfx.stomp();
           this.stage.addShake(0.18);
           this.particles.sparksAt(piece.root.position.clone().setY(0.03), { count: 14, color: DUST, speed: 1.3, life: 0.5, gravity: 3, spread: new THREE.Vector3(0.4, 0, 0.4) });
@@ -152,9 +162,37 @@ export class Locomotion {
     await this.anim.tween(duration, (t) => (piece.mounted = t), ease.outBack);
   }
 
+  /** The queen or king rises out of the piece as a living lady or lord. */
+  async comeAlive(piece: PieceView, duration = 0.5): Promise<void> {
+    const glow = TEAM_GLOW[piece.color];
+    const at = piece.root.position.clone().setY(0.7);
+    this.particles.sparksAt(at, { count: 70, color: glow, speed: 1.6, life: 0.9, drag: 1.5, spread: new THREE.Vector3(0.3, 1, 0.3) });
+    this.particles.sparksAt(at, { count: 30, color: 0xffe9a8, speed: 1, life: 1.1, gravity: -0.6 });
+    this.sfx.magic();
+    await this.anim.tween(duration, (t) => (piece.avatar = t), ease.outBack);
+  }
+
+  /** The king draws the sword from his belt. */
+  async drawSword(piece: PieceView): Promise<void> {
+    if (!piece.figure) return;
+    this.sfx.unsheathe();
+    piece.figure.drawn = 1;
+    this.particles.sparksAt(piece.weaponTip(), { count: 30, color: 0xfff1c0, speed: 1.6, life: 0.4 });
+    await this.pose(piece, { guard: 1 }, 0.3, ease.outBack);
+  }
+
+  /** And puts it back. */
+  async sheatheSword(piece: PieceView): Promise<void> {
+    if (!piece.figure) return;
+    await this.restPose(piece, 0.45);
+    piece.figure.drawn = 0;
+    this.sfx.sheathe();
+  }
+
   /** Light transformation used to walk: legs, eyes and weapons, mouth closed. */
   async awaken(piece: PieceView): Promise<void> {
     if (piece.type === 'n') return this.mountUp(piece, 0.4);
+    if (piece.figure) return this.comeAlive(piece, 0.45);
     const level = MARCH_LEVEL[piece.type] ?? 0.8;
     const glow = TEAM_GLOW[piece.color];
     this.sfx.skitter();
@@ -178,6 +216,8 @@ export class Locomotion {
     const tongue0 = piece.tongueOut;
     const reach0 = piece.tentacleReach;
     const rear0 = piece.rear;
+    const av0 = piece.avatar;
+    if (piece.figure) piece.figure.drawn = 0;
     await Promise.all([
       this.anim.tween(duration, (t) => {
         piece.monster = lerp(m0, 0, t);
@@ -188,6 +228,7 @@ export class Locomotion {
         piece.tongueOut = lerp(tongue0, 0, t);
         piece.tentacleReach = lerp(reach0, 0, t);
         piece.rear = lerp(rear0, 0, t);
+        piece.avatar = lerp(av0, 0, t);
       }, ease.inOutCubic),
       this.restPose(piece, duration),
       this.turn(piece, piece.restFacing, duration),
@@ -212,8 +253,7 @@ export class Locomotion {
       await this.anim.tween(0.35, (t) => (piece.rear = Math.sin(t * Math.PI) * 0.6), ease.outQuad);
     } else {
       if (piece.type === 'b') await this.pose(piece, { guard: 1 }, 0.15);
-      if (piece.type === 'k') await this.pose(piece, { lift: 0.25 }, 0.15);
-      const speed = piece.type === 'q' ? 2.2 : piece.type === 'k' ? 1.3 : 1.7;
+      const speed = piece.type === 'q' ? 1.5 : piece.type === 'k' ? 1.35 : 1.7;
       await this.walk(piece, to, speed);
     }
     await this.slumber(piece, 0.35);

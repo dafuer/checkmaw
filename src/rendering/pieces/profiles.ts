@@ -133,7 +133,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 1.0,
     height: 1.35,
-    traits: { legs: 6, legLength: 1.04, lift: 0.61, teeth: 14, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 6, tongue: 0.9, gape: 1.3, name: 'Hydra Regina' },
+    traits: { legs: 6, legLength: 1.04, lift: 0.61, teeth: 14, toothSize: 0.06, eyeSize: 0.045, horns: 0, tentacles: 6, tongue: 0.9, gape: 1.3, name: 'the Radiant Lady' },
   },
   k: {
     profile: [
@@ -153,7 +153,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 1.05,
     height: 1.58,
-    traits: { legs: 8, legLength: 1.16, lift: 0.68, teeth: 16, toothSize: 0.07, eyeSize: 0.05, horns: 2, tentacles: 0, tongue: 1.1, gape: 1.4, name: 'Abyss King' },
+    traits: { legs: 8, legLength: 1.16, lift: 0.68, teeth: 16, toothSize: 0.07, eyeSize: 0.05, horns: 2, tentacles: 0, tongue: 1.1, gape: 1.4, name: 'the Sovereign' },
   },
 };
 
