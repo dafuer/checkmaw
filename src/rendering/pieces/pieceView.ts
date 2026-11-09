@@ -25,6 +25,17 @@ function shadowed<T extends THREE.Object3D>(obj: T): T {
   return obj;
 }
 
+/** Two-bone leg of the rook brute, solved so the foot stays on the floor. */
+interface BipedLeg {
+  hip: THREE.Group;
+  knee: THREE.Group;
+  ankle: THREE.Group;
+  side: number;
+}
+
+const BIPED_THIGH = 0.3;
+const BIPED_SHIN = 0.3;
+
 interface Leg {
   hip: THREE.Group;
   knee: THREE.Group;
@@ -64,6 +75,7 @@ export class PieceView {
   private readonly upperTeeth = new THREE.Group();
   private readonly eyes: THREE.Mesh[] = [];
   private readonly legs: Leg[] = [];
+  private readonly bipedLegs: BipedLeg[] = [];
   private readonly tentacles: Chain[] = [];
   private readonly horns: THREE.Group[] = [];
   private tongue: Chain | null = null;
@@ -147,7 +159,8 @@ export class PieceView {
 
     this.buildTeeth();
     this.buildEyes();
-    this.buildLegs();
+    if (this.traits.biped) this.buildBipedLegs();
+    else this.buildLegs();
     if (this.traits.tentacles > 0) this.buildTentacles();
     if (this.traits.horns > 0) this.buildHorns();
     if (this.traits.tongue > 0) this.buildTongue();
@@ -265,7 +278,8 @@ export class PieceView {
     this.mats.flesh.emissiveIntensity = 0.5 + this.mouth * 0.9;
     if (this.gulletLight) this.gulletLight.intensity = m * this.mouth * 0.35;
 
-    this.updateLegs(lift);
+    if (this.bipedLegs.length) this.updateBipedLegs(lift);
+    else this.updateLegs(lift);
     this.updateChains(t);
     for (const horn of this.horns) horn.scale.setScalar(Math.max(0.0001, m));
     if (this.figure) this.figure.apply(t, this.gait, this.gaitPhase, this.hop);
@@ -524,6 +538,42 @@ export class PieceView {
     }
   }
 
+  /** Thick beast legs: thigh, knee, shin and a clawed foot. */
+  private buildBipedLegs(): void {
+    const thighGeo = new THREE.CapsuleGeometry(0.075, BIPED_THIGH - 0.1, 4, 12);
+    thighGeo.translate(0, -BIPED_THIGH / 2, 0);
+    const shinGeo = new THREE.CapsuleGeometry(0.06, BIPED_SHIN - 0.08, 4, 12);
+    shinGeo.translate(0, -BIPED_SHIN / 2, 0);
+    for (const side of [-1, 1]) {
+      const hip = new THREE.Group();
+      hip.position.set(side * 0.27, 0.13, 0);
+      hip.rotation.order = 'ZXY';
+      hip.rotation.z = side * 0.12;
+      hip.add(new THREE.Mesh(thighGeo, this.mats.carapace));
+      const knee = new THREE.Group();
+      knee.position.y = -BIPED_THIGH;
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), this.mats.accent);
+      knee.add(cap, new THREE.Mesh(shinGeo, this.mats.carapace));
+      const ankle = new THREE.Group();
+      ankle.position.y = -BIPED_SHIN;
+      ankle.userData.foot = true;
+      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), this.mats.carapace);
+      foot.scale.set(1, 0.55, 1.35);
+      foot.position.z = 0.03;
+      ankle.add(foot);
+      for (let i = -1; i <= 1; i++) {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.08, 6), this.mats.tooth);
+        claw.rotation.x = Math.PI / 2;
+        claw.position.set(i * 0.045, 0.012, 0.15);
+        ankle.add(claw);
+      }
+      knee.add(ankle);
+      hip.add(knee);
+      this.lower.add(hip);
+      this.bipedLegs.push({ hip, knee, ankle, side });
+    }
+  }
+
   private buildLegs(): void {
     const { legs: n, legLength } = this.traits;
     const k = this.traits.legThickness ?? 1;
@@ -618,6 +668,41 @@ export class PieceView {
   }
 
   // --------------------------------------------------------------- animation
+
+  /** Two-bone IK in the forward/up plane: the foot is planted below the hip and strides with the gait. */
+  private updateBipedLegs(lift: number): void {
+    const m = this.monster;
+    const s = Math.max(0.0001, m);
+    const sy = this.body.scale.y;
+    for (const leg of this.bipedLegs) {
+      leg.hip.scale.setScalar(s);
+      leg.hip.visible = m > 0.01;
+      const phase = this.gaitPhase + (leg.side > 0 ? Math.PI : 0);
+      // Foot target in hip space (local units, before the leg's own scale).
+      const reach = BIPED_THIGH + BIPED_SHIN;
+      const hipH = (lift + this.hop + 0.13 * sy) / (sy * s);
+      const stride = Math.sin(phase) * 0.16 * this.gait;
+      const raise = Math.max(0, Math.cos(phase)) * 0.12 * this.gait;
+      let z = stride;
+      let y = -(this.airborne ? reach * 0.8 : hipH) + raise;
+      const d = Math.hypot(z, y);
+      const maxD = reach * 0.995;
+      if (d > maxD) {
+        z *= maxD / d;
+        y *= maxD / d;
+      }
+      const D = Math.min(Math.hypot(z, y), maxD);
+      const toFoot = Math.atan2(z, -y);
+      const a1 = Math.acos(Math.min(1, (BIPED_THIGH ** 2 + D * D - BIPED_SHIN ** 2) / (2 * BIPED_THIGH * D)));
+      const a2 = Math.acos(Math.min(1, (BIPED_SHIN ** 2 + D * D - BIPED_THIGH ** 2) / (2 * BIPED_SHIN * D)));
+      // Knee forward like a brawler: thigh swings forward, shin back down to the foot.
+      const thigh = toFoot + a1;
+      const knee = -(a1 + a2);
+      leg.hip.rotation.x = -thigh;
+      leg.knee.rotation.x = -knee;
+      leg.ankle.rotation.x = thigh + knee;
+    }
+  }
 
   private updateLegs(lift: number): void {
     const m = this.monster;

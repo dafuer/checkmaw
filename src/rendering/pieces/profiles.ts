@@ -37,6 +37,8 @@ export interface MonsterTraits {
   legThickness?: number;
   /** Overall size multiplier of the monster form. */
   bulk?: number;
+  /** Walks on two jointed beast legs instead of spider legs. */
+  biped?: boolean;
   name: string;
 }
 
@@ -83,7 +85,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.66,
     height: 0.96,
-    traits: { legs: 2, legLength: 0.95, lift: 0.5, teeth: 12, toothSize: 0.085, eyeSize: 0.05, horns: 0, tentacles: 0, tongue: 0.9, gape: 1.75, legThickness: 2.0, bulk: 1.35, name: 'Tower Brute' },
+    traits: { legs: 2, legLength: 0.95, lift: 0.44, teeth: 12, toothSize: 0.085, eyeSize: 0.05, horns: 0, tentacles: 0, tongue: 0.9, gape: 1.75, legThickness: 2.0, bulk: 1.35, biped: true, name: 'Tower Brute' },
   },
   n: {
     profile: [...BASE, [0.22, 0.22], [0.24, 0.27], [0.2, 0.29], [0, 0.29]],

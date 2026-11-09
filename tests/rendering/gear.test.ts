@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import type { PieceType } from '../../src/domain/types';
 import { Gear, gearSpec, hasGear } from '../../src/rendering/pieces/gear';
@@ -97,5 +98,36 @@ describe('queen and king figures', () => {
     king.resetPose();
     king.apply();
     expect(hand.visible).toBe(false);
+  });
+});
+
+describe('rook brute legs', () => {
+  const feetHeights = (rook: PieceView): number[] => {
+    rook.root.updateMatrixWorld(true);
+    const ys: number[] = [];
+    rook.root.traverse((o) => {
+      if (o.userData.foot) ys.push(o.getWorldPosition(new THREE.Vector3()).y);
+    });
+    return ys;
+  };
+
+  it('plants both feet on the floor in monster form', () => {
+    const rook = new PieceView('r1', 'r', 'w');
+    rook.monster = 1;
+    rook.apply();
+    const ys = feetHeights(rook);
+    expect(ys).toHaveLength(2);
+    for (const y of ys) expect(Math.abs(y)).toBeLessThan(0.05);
+  });
+
+  it('lifts one foot at a time while walking', () => {
+    const rook = new PieceView('r2', 'r', 'b');
+    rook.monster = 1;
+    rook.gait = 1;
+    rook.gaitPhase = 0;
+    rook.apply();
+    const [a, b] = feetHeights(rook);
+    expect(Math.max(a, b)).toBeGreaterThan(0.08);
+    expect(Math.min(a, b)).toBeLessThan(0.05);
   });
 });
