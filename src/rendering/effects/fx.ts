@@ -78,7 +78,11 @@ export class Fx {
    * independently, the first on the normal's side. The source should be hidden
    * by the caller.
    */
-  split(source: THREE.Object3D, normal = new THREE.Vector3(1, 0, 0), offset = 0): { halves: [THREE.Object3D, THREE.Object3D]; dispose: () => void } {
+  split(
+    source: THREE.Object3D,
+    normal = new THREE.Vector3(1, 0, 0),
+    offset = 0,
+  ): { halves: [THREE.Object3D, THREE.Object3D]; burn: (color: THREE.ColorRepresentation, intensity: number) => void; dispose: () => void } {
     source.updateMatrixWorld(true);
     const materials: THREE.Material[] = [];
     const ticker: Array<() => void> = [];
@@ -114,6 +118,15 @@ export class Fx {
     for (const f of ticker) f();
     return {
       halves,
+      /** Makes both halves glow (the hot edge of the cut), e.g. fading out over time. */
+      burn: (color, intensity) => {
+        for (const m of materials) {
+          const lit = m as THREE.MeshStandardMaterial;
+          if (!lit.emissive) continue;
+          lit.emissive.set(color);
+          lit.emissiveIntensity = intensity;
+        }
+      },
       dispose: () => {
         stop();
         for (const h of halves) this.scene.remove(h);

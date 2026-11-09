@@ -623,18 +623,27 @@ export class BattleDirector {
     v.body.rotation.set(0, 0, 0);
     const cut = this.fx.split(v.root);
     v.root.visible = false;
+    // The halves glow white-hot along the cut so they read against the dark board.
+    const hot = new THREE.Color(glow).lerp(new THREE.Color(0xffffff), 0.35);
+    cut.burn(hot, 1.4);
     const [right, left] = cut.halves;
     const r0 = right.position.clone();
     const l0 = left.position.clone();
+    const rq = right.quaternion.clone();
+    const lq = left.quaternion.clone();
+    const roll = new THREE.Quaternion();
+    const zAxis = new THREE.Vector3(0, 0, 1);
     const sideways = new THREE.Vector3(Math.cos(a.root.rotation.y), 0, -Math.sin(a.root.rotation.y));
     this.particles.sparksAt(r0.clone().setY(v.height * 0.5), { count: 40, color: glow, speed: 1.2, life: 0.6, gravity: 2, spread: new THREE.Vector3(0, v.height * 0.5, 0) });
     await this.anim.wait(0.25);
     await this.anim.tween(0.9, (t) => {
+      cut.burn(hot, 1.4 * (1 - t) + 0.25);
       const apart = t * 0.32;
       right.position.copy(r0).addScaledVector(sideways, apart);
       left.position.copy(l0).addScaledVector(sideways, -apart);
-      right.rotation.z = -t * 1.2;
-      left.rotation.z = t * 1.2;
+      // Each half topples outward around its own forward axis.
+      right.quaternion.copy(rq).multiply(roll.setFromAxisAngle(zAxis, -t * 1.2));
+      left.quaternion.copy(lq).multiply(roll.setFromAxisAngle(zAxis, t * 1.2));
     }, ease.inQuad);
     this.sfx.crack();
     this.stage.addShake(0.3);
@@ -790,15 +799,20 @@ export class BattleDirector {
     const localCut = v.root.worldToLocal(new THREE.Vector3(V.x, cutHeight, V.z)).y;
     const cut = this.fx.split(v.root, new THREE.Vector3(0, 1, 0), localCut);
     v.root.visible = false;
+    const hot = new THREE.Color(glow).lerp(new THREE.Color(0xffffff), 0.35);
     const [upper] = cut.halves;
     const u0 = upper.position.clone();
-    const u0rot = upper.rotation.clone();
+    const uq = upper.quaternion.clone();
+    // Tip forward, around the horizontal axis across the cut direction.
+    const tipAxis = new THREE.Vector3(fwd.z, 0, -fwd.x);
+    const tip = new THREE.Quaternion();
     this.sfx.crack();
     this.particles.sparksAt(V.clone().setY(cutHeight), { count: 60, color: TEAM_GLOW[v.color], speed: 1.5, life: 0.7, spread: new THREE.Vector3(0.4, 0, 0.4) });
     await this.anim.tween(0.8, (t) => {
+      cut.burn(hot, 1.2 * (1 - t) + 0.2);
       upper.position.copy(u0).addScaledVector(fwd, t * 0.35);
       upper.position.y = u0.y - t * t * 0.25;
-      upper.rotation.set(u0rot.x + t * 0.5 * fwd.z, u0rot.y, u0rot.z - t * 0.5 * fwd.x);
+      upper.quaternion.copy(uq).premultiply(tip.setFromAxisAngle(tipAxis, t * 0.5));
     }, ease.inQuad);
     this.stage.addShake(0.4);
     this.sfx.impact();
