@@ -148,6 +148,48 @@ export class Sfx {
     notes.forEach((n, i) => this.tone(n, 0.45, 'triangle', 0.2, n, i * 0.18));
   }
 
+  /** Metal on metal: blade against shield or blade. */
+  clang(): void {
+    for (const f of [1240, 1870, 2630]) this.tone(f, 0.45, 'triangle', 0.07, f * 0.98);
+    this.noise(0.06, 0.4, 6000, 'highpass');
+  }
+
+  /** A blade cutting the air. */
+  slash(): void {
+    this.noise(0.18, 0.35, 3200, 'bandpass');
+    this.tone(1800, 0.15, 'sawtooth', 0.04, 500);
+  }
+
+  /** One hoof beat. */
+  clop(): void {
+    this.tone(420 + Math.random() * 80, 0.05, 'square', 0.08, 180);
+    this.noise(0.04, 0.2, 1500, 'bandpass');
+  }
+
+  /** Heavy footstep of a giant. */
+  stomp(): void {
+    this.tone(48, 0.4, 'sine', 0.7, 28);
+    this.noise(0.25, 0.4, 260, 'lowpass');
+  }
+
+  /** Crackling lightning bolt. */
+  zap(): void {
+    for (let i = 0; i < 6; i++) setTimeout(() => this.noise(0.05, 0.35, 2000 + Math.random() * 5000, 'bandpass'), i * 30);
+    this.tone(90, 0.35, 'sawtooth', 0.2, 40);
+  }
+
+  /** Horse whinny. */
+  neigh(): void {
+    this.tone(700, 0.18, 'sawtooth', 0.08, 1100);
+    this.tone(1100, 0.5, 'sawtooth', 0.07, 520, 0.16);
+  }
+
+  /** A comic flattening splat. */
+  splat(): void {
+    this.noise(0.25, 0.55, 700, 'lowpass');
+    this.tone(160, 0.3, 'square', 0.12, 50);
+  }
+
   private startDrone(): void {
     const ctx = this.ctx;
     if (!ctx || !this.master || this.droneStarted) return;

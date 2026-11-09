@@ -29,22 +29,30 @@ Other scripts:
 - Drag to orbit the camera, scroll to zoom.
 - Hold **Space** to fast-forward a battle; press **U** to undo.
 - Top-right controls: Undo, New game, Battles on/off (instant captures when off),
-  Auto camera (turns the board to the side to move), Sound.
+  Walks on/off (animated ordinary moves), Auto camera (turns the board to the
+  side to move), Sound.
 
 ## The monsters
 
-Each piece type has its own monster form and attack:
+Every capture is a short duel. Each piece type has its own monster form,
+weapon and finishing move:
 
-| Piece | Monster | Attack |
-|-------|---------|--------|
-| Pawn | Gnasher | Lunges and chomps three times |
-| Knight | Night Mare | Leaps through the air and bites from above |
-| Bishop | Hollow Prophet | Lashes a long tongue and reels the victim in |
-| Rook | Siege Maw | Ground slam throws the victim up into its huge maw |
-| Queen | Hydra Regina | Tentacles lift and shake the victim before eating it |
-| King | Abyss King | Opens a vortex that sucks the victim in |
+| Piece | Monster | Arsenal | Finishing move |
+|-------|---------|---------|----------------|
+| Pawn | Gnasher | Short sword and buckler | Two stabs, a rising slash that tosses the victim into its jaws |
+| Knight | Night Mare | War horse, armoured rider, lance | Backs off, charges, impales the victim and flings it into the air |
+| Bishop | Grave Paladin | Glowing great sword and kite shield | Charges the blade and cleaves the victim in two |
+| Rook | Tower Brute | Huge fists, stomping legs | Grabs the victim, lifts it overhead, slams it flat and eats the pancake |
+| Queen | Hydra Regina | Staff and tentacles | Levitates, strikes with lightning, then the tentacles feed |
+| King | Abyss King | War hammer | Opens an abyss under the victim and hammers it down into it |
 
-The victim always fights back with a snap before being eaten.
+The victim fights back first with its own weapon; pawns and bishops block the
+blow with their shields.
+
+Ordinary moves are animated too (the **Walks** toggle): the knight mounts its
+horse and gallops along the L, the rook stomps across as a giant brute that
+shakes the board, the queen floats, and the other pieces march with their
+weapons.
 
 ## Architecture
 
@@ -56,9 +64,10 @@ src/
     stage.ts       renderer, camera, lights, bloom, frame loop, camera flights
     board.ts       board, frame, arena, braziers, embers, square markers
     boardView.ts   one PieceView per domain piece; plays domain events as animations
-    pieces/        procedural lathe pieces that split at the "mouth" into monsters
-    battle/        BattleDirector: the capture cinematics
-    effects/       pooled shards and sparks
+    pieces/        procedural lathe pieces that split at the "mouth" into monsters,
+                   plus gear (arms and weapons) and the knight's mount
+    battle/        BattleDirector (capture duels) and Locomotion (walk, stomp, float, gallop)
+    effects/       pooled shards and sparks; Fx: lightning, shockwaves, slash arcs, portals, cutting in two
     animation/     promise-based tween timeline (respects fast-forward speed)
   audio/         Web Audio procedural sound effects
   ui/            HUD overlay (DOM + CSS)
@@ -71,7 +80,8 @@ reacts to those events, so rules and visuals can evolve independently.
 
 ### Debug views
 
-- `http://localhost:5173/#lab` — every piece type, both colours, in monster form.
+- `http://localhost:5173/#lab` — every piece type, both colours, in armed monster form.
+  `focusLab(index)` in the console shows one of them up close.
 - `http://localhost:5173/#lab-closed` — the same pieces in their normal form.
 - `window.chess.controller.restart('<FEN>')` in the console loads any position.
 - `window.chess.stage.animator.speed = 0.2` slows every animation down.
@@ -79,7 +89,8 @@ reacts to those events, so rules and visuals can evolve independently.
 ## Swapping in real 3D models later
 
 Pieces are built in `src/rendering/pieces/pieceView.ts`. Every monster feature is a
-0..1 parameter (`monster`, `mouth`, `tongueOut`, `tentacleReach`, `gait`), so a
+0..1 parameter (`monster`, `mouth`, `armed`, `mounted`, `rear`, `tongueOut`,
+`tentacleReach`, `gait`, plus named gear pose weights such as `raise` and `strike`), so a
 glTF model with equivalent animations can replace the procedural one behind the
 same interface without touching the battle director.
 

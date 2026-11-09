@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Color, PieceType } from '../../domain/types';
+import { Gear, hasGear } from './gear';
 import { createMaterials, TEAM_GLOW, type PieceMaterials } from './materials';
+import { Mount, REAR_PIVOT_Z } from './mount';
 import { radiusAt, SHAPES, splitProfile, type MonsterTraits, type Point } from './profiles';
 
 const LATHE_SEGMENTS = 48;
@@ -45,6 +47,8 @@ interface Chain {
  */
 export class PieceView {
   readonly root = new THREE.Group();
+  /** Pivot between root and body, used to rear the knight's horse. */
+  private readonly rig = new THREE.Group();
   /** Lifted by the legs; carries the whole piece. */
   readonly body = new THREE.Group();
   readonly traits: MonsterTraits;
@@ -65,6 +69,13 @@ export class PieceView {
   /** Borrowed from a shared pool only while fighting (lights are costly per shader). */
   private gulletLight: THREE.PointLight | null = null;
   private readonly mouthRadius: number;
+  /** Arms and weapons (every type except the knight). */
+  readonly gear: Gear | null = null;
+  /** The knight's horse and rider. */
+  readonly mount: Mount | null = null;
+  private readonly knightBase: THREE.Object3D[] = [];
+  /** 0..1 knight's horse rears up on its hind legs. */
+  rear = 0;
 
   monster = 0;
   mouth = 0;
@@ -72,6 +83,24 @@ export class PieceView {
   /** Tongue length multiplier needed to reach the aimed target. */
   private tongueReach = 1;
   tentacleReach = 0;
+  /** 0..1 arms and weapons grown out. */
+  get armed(): number {
+    return this.gear?.out ?? 0;
+  }
+
+  set armed(v: number) {
+    if (this.gear) this.gear.out = v;
+  }
+
+  /** 0..1 knight transformed into a mounted rider. */
+  get mounted(): number {
+    return this.mount?.amount ?? 0;
+  }
+
+  set mounted(v: number) {
+    if (this.mount) this.mount.amount = v;
+  }
+
   /** 0..1 walking gait blend. */
   gait = 0;
   gaitPhase = 0;
@@ -94,7 +123,8 @@ export class PieceView {
     this.mats = createMaterials(color);
     this.mouthRadius = type === 'n' ? 0.12 : radiusAt(shape.profile, shape.mouthY);
 
-    this.root.add(this.body);
+    this.root.add(this.rig);
+    this.rig.add(this.body);
     this.body.add(this.lower, this.hinge);
     this.hinge.position.set(0, this.mouthY, -this.mouthRadius * 0.95);
     this.upper.position.set(0, -this.mouthY, this.mouthRadius * 0.95);
@@ -109,7 +139,14 @@ export class PieceView {
     if (this.traits.tentacles > 0) this.buildTentacles();
     if (this.traits.horns > 0) this.buildHorns();
     if (this.traits.tongue > 0) this.buildTongue();
-
+    if (hasGear(type)) {
+      this.gear = new Gear(type, color, this.mats);
+      this.lower.add(this.gear.group);
+    }
+    if (type === 'n') {
+      this.mount = new Mount(color, this.mats);
+      this.rig.add(this.mount.group);
+    }
 
     shadowed(this.root);
     this.root.userData.pieceId = id;
@@ -181,9 +218,11 @@ export class PieceView {
 
     // Breathing idle on the board, heavier breathing as a monster.
     const breathe = Math.sin(t * (1.6 + m * 2.5)) * (0.004 + m * 0.02);
-    const lift = tr.lift * m;
+    const bulk = 1 + m * ((tr.bulk ?? 1) - 1);
+    const lift = tr.lift * m * bulk;
     this.body.position.y = lift + this.hop + Math.max(0, breathe);
-    this.body.scale.set(1 + m * 0.08 + breathe, 1 + m * 0.12 - breathe, 1 + m * 0.08 + breathe);
+    this.body.scale.set((1 + m * 0.08 + breathe) * bulk, (1 + m * 0.12 - breathe) * bulk, (1 + m * 0.08 + breathe) * bulk);
+    if (this.mount) this.applyMount(t);
 
     // Jaw: idle monsters chatter slightly.
     const chatter = m > 0.5 ? Math.max(0, Math.sin(t * 13)) * 0.05 * m : 0;
@@ -206,6 +245,27 @@ export class PieceView {
     this.updateLegs(lift);
     this.updateChains(t);
     for (const horn of this.horns) horn.scale.setScalar(Math.max(0.0001, m));
+    this.gear?.apply(t, this.gait, this.gaitPhase);
+  }
+
+  /** The knight piece becomes the horse's head in front of the barrel. */
+  private applyMount(t: number): void {
+    const mount = this.mount!;
+    const a = mount.amount;
+    mount.apply(t);
+    const headScale = 1 - a * 0.4;
+    this.body.position.y += a * (0.4 + mount.bob);
+    this.body.position.z = a * 0.3;
+    this.body.scale.multiplyScalar(headScale);
+    this.body.rotation.x = -a * 0.15 * (1 - this.rear) + Math.sin(mount.gallopPhase) * 0.1 * mount.gallop;
+    for (const o of this.knightBase) {
+      o.visible = a < 0.5;
+      o.scale.setScalar(Math.max(0.0001, 1 - a * 2));
+    }
+    // Rear up around the hind hooves.
+    const angle = -this.rear * 0.75;
+    this.rig.rotation.x = angle;
+    this.rig.position.set(0, REAR_PIVOT_Z * Math.sin(angle), REAR_PIVOT_Z - REAR_PIVOT_Z * Math.cos(angle));
   }
 
   dispose(): void {
@@ -214,6 +274,37 @@ export class PieceView {
       if (mesh.isMesh) mesh.geometry.dispose();
     });
     for (const mat of Object.values(this.mats)) (mat as THREE.Material).dispose();
+    this.gear?.dispose();
+    this.mount?.dispose();
+  }
+
+  /** Back to a plain chess piece: every monster, gear and mount parameter at rest. */
+  resetPose(): void {
+    this.monster = 0;
+    this.mouth = 0;
+    this.hop = 0;
+    this.airborne = false;
+    this.gait = 0;
+    this.tongueOut = 0;
+    this.tentacleReach = 0;
+    this.armed = 0;
+    this.mounted = 0;
+    this.rear = 0;
+    if (this.mount) {
+      this.mount.gallop = 0;
+      this.mount.couch = 0;
+      this.mount.windup = 0;
+    }
+    if (this.gear) for (const k of Object.keys(this.gear.pose) as Array<keyof typeof this.gear.pose>) this.gear.pose[k] = 0;
+    this.body.rotation.set(0, 0, 0);
+    this.root.scale.setScalar(1);
+  }
+
+  /** World position of the weapon tip (lance tip for the knight). */
+  weaponTip(target = new THREE.Vector3()): THREE.Vector3 {
+    if (this.mount) return this.mount.lanceTipWorld(target);
+    if (this.gear) return this.gear.tip(target);
+    return this.mouthWorld(target);
   }
 
   // ---------------------------------------------------------------- building
@@ -284,11 +375,13 @@ export class PieceView {
 
   private buildKnight(): void {
     const { profile } = SHAPES.n;
-    this.lower.add(new THREE.Mesh(lathe(profile), this.mats.body));
+    const base = new THREE.Mesh(lathe(profile), this.mats.body);
+    this.lower.add(base);
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.335, 0.018, 8, 48), this.mats.accent);
     ring.rotation.x = Math.PI / 2;
     ring.position.y = 0.11;
     this.lower.add(ring);
+    this.knightBase.push(base, ring);
 
     const extrude = (pts: Array<[number, number]>) => {
       const s = new THREE.Shape();
@@ -406,13 +499,14 @@ export class PieceView {
 
   private buildLegs(): void {
     const { legs: n, legLength } = this.traits;
-    const thighGeo = new THREE.CylinderGeometry(0.035, 0.05, 1, 8);
+    const k = this.traits.legThickness ?? 1;
+    const thighGeo = new THREE.CylinderGeometry(0.035 * k, 0.05 * k, 1, 8);
     thighGeo.rotateZ(-Math.PI / 2);
     thighGeo.translate(0.5, 0, 0);
-    const shinGeo = new THREE.ConeGeometry(0.04, 1, 8);
+    const shinGeo = new THREE.CylinderGeometry(0.045 * k, k > 1.5 ? 0.06 * k : 0.002, 1, 8);
     shinGeo.rotateZ(-Math.PI / 2);
     shinGeo.translate(0.5, 0, 0);
-    const jointGeo = new THREE.SphereGeometry(0.05, 10, 8);
+    const jointGeo = new THREE.SphereGeometry(0.05 * Math.sqrt(k), 10, 8);
     for (let i = 0; i < n; i++) {
       const angle = ((i + 0.5) / n) * Math.PI * 2;
       const hip = new THREE.Group();
@@ -516,9 +610,11 @@ export class PieceView {
         leg.knee.rotation.z = -1.2 - Math.sin(this.time * 18 + leg.phase) * 0.4;
         continue;
       }
-      const hipH = lift + this.hop + 0.13 * this.body.scale.y;
-      const kneeH = hipH + L1 * Math.sin(thighUp) - raise * 0.08;
-      const b = Math.asin(Math.min(1, Math.max(0, kneeH) / Math.max(0.0001, L2)));
+      // Leg lengths in world units (the body may be scaled up as a monster).
+      const sy = this.body.scale.y;
+      const hipH = lift + this.hop + 0.13 * sy;
+      const kneeH = hipH + L1 * sy * Math.sin(thighUp) - raise * 0.08;
+      const b = Math.asin(Math.min(1, Math.max(0, kneeH) / Math.max(0.0001, L2 * sy)));
       leg.knee.rotation.z = -(thighUp + b);
     }
   }

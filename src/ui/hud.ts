@@ -18,6 +18,7 @@ export interface HudActions {
   onUndo(): void;
   onRestart(): void;
   onToggleCinematics(on: boolean): void;
+  onToggleMarches(on: boolean): void;
   onToggleSound(on: boolean): void;
   onToggleAutoCamera(on: boolean): void;
 }
@@ -67,6 +68,7 @@ export class Hud {
       b.textContent = `${label}: ${on ? 'on' : 'off'}`;
     };
     toggle('Battles', 'Monster battle cinematics on captures', true, actions.onToggleCinematics);
+    toggle('Walks', 'Pieces transform and walk, ride or float on every move', true, actions.onToggleMarches);
     toggle('Auto camera', 'Turn the camera to the side to move', true, actions.onToggleAutoCamera);
     toggle('Sound', 'Procedural sound effects', true, actions.onToggleSound);
 

@@ -33,6 +33,10 @@ export interface MonsterTraits {
   tongue: number;
   /** How far the jaw can open, in radians. */
   gape: number;
+  /** Leg girth multiplier (1 = spindly spider legs). */
+  legThickness?: number;
+  /** Overall size multiplier of the monster form. */
+  bulk?: number;
   name: string;
 }
 
@@ -79,7 +83,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.66,
     height: 0.96,
-    traits: { legs: 6, legLength: 0.9, lift: 0.51, teeth: 12, toothSize: 0.085, eyeSize: 0.05, horns: 0, tentacles: 0, tongue: 0.9, gape: 1.75, name: 'Siege Maw' },
+    traits: { legs: 2, legLength: 0.95, lift: 0.5, teeth: 12, toothSize: 0.085, eyeSize: 0.05, horns: 0, tentacles: 0, tongue: 0.9, gape: 1.75, legThickness: 2.0, bulk: 1.35, name: 'Tower Brute' },
   },
   n: {
     profile: [...BASE, [0.22, 0.22], [0.24, 0.27], [0.2, 0.29], [0, 0.29]],
@@ -107,7 +111,7 @@ export const SHAPES: Record<PieceType, PieceShape> = {
     ],
     mouthY: 0.84,
     height: 1.15,
-    traits: { legs: 4, legLength: 0.87, lift: 0.48, teeth: 10, toothSize: 0.05, eyeSize: 0.04, horns: 0, tentacles: 3, tongue: 1.6, gape: 1.2, name: 'Hollow Prophet' },
+    traits: { legs: 4, legLength: 0.87, lift: 0.48, teeth: 10, toothSize: 0.05, eyeSize: 0.04, horns: 0, tentacles: 3, tongue: 1.6, gape: 1.2, name: 'Grave Paladin' },
   },
   q: {
     profile: [

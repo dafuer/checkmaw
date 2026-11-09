@@ -19,6 +19,8 @@ export class BoardView {
   readonly particles = new Particles();
   readonly director: BattleDirector;
   cinematics = true;
+  /** Ordinary moves play each piece's own walk (riding, stomping, floating...). */
+  marches = true;
   private readonly views = new Map<string, PieceView>();
 
   constructor(
@@ -62,14 +64,8 @@ export class BoardView {
       const pos = squareToWorld(p.square);
       view.root.position.copy(pos);
       view.root.rotation.set(0, view.restFacing, 0);
-      view.root.scale.setScalar(1);
       view.root.visible = true;
-      view.monster = 0;
-      view.mouth = 0;
-      view.hop = 0;
-      view.tongueOut = 0;
-      view.tentacleReach = 0;
-      view.body.rotation.set(0, 0, 0);
+      view.resetPose();
     }
   }
 
@@ -111,13 +107,17 @@ export class BoardView {
     const view = this.views.get(id);
     if (!view) return;
     const target = squareToWorld(to);
+    if (this.marches) {
+      await this.director.moves.march(view, target);
+      return;
+    }
     const distance = view.root.position.distanceTo(target);
     if (view.type === 'n') {
-      await this.director.glide(view, target, 0.55, 0.9);
+      await this.director.moves.glide(view, target, 0.55, 0.9);
       this.particles.sparksAt(target.clone().setY(0.05), { count: 20, color: 0xb59a7a, speed: 1.4, life: 0.5, gravity: 3, spread: new THREE.Vector3(0.4, 0, 0.4) });
       return;
     }
-    await this.director.glide(view, target, Math.min(0.9, 0.3 + distance * 0.09), 0.12 + distance * 0.02);
+    await this.director.moves.glide(view, target, Math.min(0.9, 0.3 + distance * 0.09), 0.12 + distance * 0.02);
   }
 
   private async capture(attackerId: string, victimId: string, to: Square): Promise<void> {

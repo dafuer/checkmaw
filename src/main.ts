@@ -17,6 +17,7 @@ const hud = new Hud(container, {
   onUndo: () => controller?.undo(),
   onRestart: () => controller?.restart(),
   onToggleCinematics: (on) => (view.cinematics = on),
+  onToggleMarches: (on) => (view.marches = on),
   onToggleSound: (on) => sfx.setMuted(!on),
   onToggleAutoCamera: (on) => controller?.setAutoCamera(on),
 });

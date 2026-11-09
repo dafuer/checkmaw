@@ -10,6 +10,8 @@ Branch: `feat/chess-3d-monsters` · Delivery: `single-pr` (unattended overnight 
 - S5 — Original style, not a copy: "battle chess era un ejemplo, no quiero lo mismo."
 - S6 — Free resources only: "todo debe ser recursos gratuitos". Downloads allowed: "te doy permiso para descargarte algún modelo 3d chulo de las piezas por internet si lo necesitas y es gratuito".
 - S7 — Built with Gentle AI workflow (this document, work-unit commits).
+- S8 — Distinct, creative battles per piece: "todas las animaciones son identicas. Hay que ser más cretivos. Por ejemplo los peones podrían llevar una pequeña espada, los alfiles una gran espada y un escudo, y así... siendo creativos".
+- S9 — Animated ordinary moves per piece: "sería posible también tener animaciones al mover las fichas? por ejemplo, el caballo se podría convertir en un caballero montado que anda de verdad, la torre en un gran mounstruo de barrio que anda, ....".
 
 Assumption (A1): pieces and monsters are generated procedurally in code (no external model files) so the transformation piece→monster is fully controllable and license-free; external models can be swapped in later through the piece factory.
 
@@ -26,6 +28,8 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T7 | S3, S6 | inline | done (not audible-verified; no errors) | 07677c8 |
 | T8 | S1 | inline | done | 07677c8, c50ce51 |
 | T9 | S3 | inline | done (60 fps after light pooling) | 42bb0f4, c50ce51 |
+| T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | see L10 |
+| T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | see L10 |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
 - T2 Domain: game model over chess.js with stable piece ids and domain events (moved, captured, castled, en passant, promoted, check, game over), undo. Unit tests.
@@ -36,6 +40,8 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 - T7 Procedural audio (WebAudio) — no asset files.
 - T8 HUD: turn, check, captured pieces, undo, restart, game over, skip battles.
 - T9 Polish: post-processing (bloom), performance, README.
+- T10 Arsenal + battles: per-type gear (arms, weapons, shields, mount) and one distinct attack choreography per attacker; victims counter with their own weapon.
+- T11 Marches: per-type move animation (knight rides a horse along the L, rook stomps as a giant brute, etc.), with a HUD toggle.
 
 Route evidence: no writer trigger (single sequential unattended session, no parallel units); all tasks inline.
 
@@ -49,3 +55,5 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L6 (2026-11-08, overnight run): Implemented T1–T9. Verification: `npm test` 24/24 green; `npm run build` OK; visual checks in Chrome through the claude-in-chrome MCP (screenshots of board, lab, pawn/queen/bishop/knight battles, checkmate finale, title screen, mouse move flow). Scripted 73-ply game (every attacker type, castling, capture-promotion) ran with no console errors and piece views always matching domain pieces.
 - L7: Problems found and fixed during visual checks: competing camera tweens (newer flight now cancels older), OrbitControls clamping distance during cinematics (controls bypassed while disabled), 32 per-piece point lights dropping to ~12 fps (pooled 2 lights → 60 fps), bishop tongue missing its target (now aimed), excessive bloom.
 - L8: Known gaps / next steps: sounds are synthesized but were not listened to; commits exceed the ~400-line slice heuristic because the run was unattended (single-pr strategy); RDD is still disabled for this clone (`gentle-ai review mode enable --scope clone` to re-enable); no push/PR made.
+- L9 (2026-11-09, user review): "buen inicio! pero todas las animaciones son identicas. Hay que ser más cretivos. Por ejemplo los peones podrían llevar una pequeña espada, los alfiles una gran espada y un escudo, y así... siendo creativos. además, sería posible también tener animaciones al mover las fichas? por ejemplo, el caballo se podría convertir en un caballero montado que anda de verdad, la torre en un gran mounstruo de barrio que anda, ...." → added S8/S9, tasks T10/T11.
+- L10 (2026-11-09): T10/T11 implemented. Gear rig (arms with blended named poses: raise/strike/draw/thrust/guard/grab/lift) gives pawn short sword + buckler, bishop glowing great sword + kite shield, rook brute fists (2 thick legs, 1.35x bulk, renamed Tower Brute), queen staff, king war hammer; the knight mounts a procedural war horse with an armoured lancer (rears via a pivot group). Duels: pawn sword combo + gulp, knight joust (impale, fling, burst), bishop cleave (victim cut in two with local clipping planes), rook grab-lift-slam-flatten + eat, queen lightning + tentacles, king abyss portal + hammer smash. Victims counter with their own weapon; shields block. Ordinary moves: Locomotion.march (knight gallops the L, rook stomps with shake, queen floats, others march armed), HUD "Walks" toggle. Checks: `npm test` 29/29, `npm run build` OK, all six captures (+ a black knight capture) ran with no errors and correct piece counts.
