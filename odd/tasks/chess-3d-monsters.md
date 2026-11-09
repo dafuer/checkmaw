@@ -34,7 +34,7 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T10 | S8 | inline | done (six duel finishers inspected frame by frame in Chrome; gear unit tests) | d3fbcae |
 | T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests; 90-ply random game clean) | 375e94b |
 | T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | f3331e4 |
-| T14 | S12 | inline | done (renamed to Checkmaw) | pending |
+| T14 | S12 | inline | done (renamed to Checkmaw) | 07aa23f |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
