@@ -40,11 +40,11 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests; 90-ply random game clean) | 375e94b |
 | T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | f3331e4 |
 | T14 | S12 | inline | done (renamed to Checkmaw) | 07aa23f |
-| T15 | S13 | inline | done (favicon checked at 256/32/16 px in Chrome) | see git log |
-| T16 | S16 | inline | done (cameraModes unit tests; top and side views checked in Chrome) | see git log |
-| T17 | S14 | inline | done (bishop tin soldier figure + pawn biped gnasher; unit tests; lab close-ups and a pawn + bishop capture game checked in Chrome, no errors) | see git log |
-| T18 | S15 | inline | done (scenery tests; meadow look tuned and a capture played in Chrome, no errors; music measured offline: peak ~0.07, quieter than effects) | see git log |
-| T19 | S17 | inline | done (timeline domain test; review bar, keys, move-list jump and exit checked in Chrome on a scholar's mate) | see git log |
+| T15 | S13 | inline | done (favicon checked at 256/32/16 px in Chrome) | f1ba6aa |
+| T16 | S16 | inline | done (cameraModes unit tests; top and side views checked in Chrome) | b87c9c4 |
+| T17 | S14 | inline | done (bishop tin soldier figure + pawn biped gnasher; unit tests; lab close-ups and a pawn + bishop capture game checked in Chrome, no errors) | 5a06397 |
+| T18 | S15 | inline | done (scenery tests; meadow look tuned and a capture played in Chrome, no errors; music measured offline: peak ~0.07, quieter than effects) | 7e2d01b |
+| T19 | S17 | inline | done (timeline domain test; review bar, keys, move-list jump and exit checked in Chrome on a scholar's mate) | 54f6600 |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
@@ -81,3 +81,4 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L16 (2026-11-09, user): "que te parece ChessCheck? la alternativa que más me ha gustado hasta ahora es checkmaw" → advised against ChessCheck (generic phrase, prior "Chess Check" e-zine); noted Checkmaw sits near Steam's CheckMaze. User: "vamos con checkmaw." → renamed (APP_NAME, page title, README, package name).
 - L17 (2026-11-10) — User: favicon; bishop as tin soldier, pawn rethink keeping its eating; optional cheerful mountain scene with calmer music; camera modes (auto, free, presets). Plan: T15 favicon, T16 camera modes, T17 walkers (bishop figure, pawn biped gremlin), T18 mountain scene + calm music.
 - L18 (2026-11-10) — User added S17 mid-task (end-of-game review). Plan T19: game-over card offers "Review game"; step back/forward through every position with arrows and buttons, last move highlighted.
+- L19 (2026-11-10) — T15–T19 done: favicon f1ba6aa, camera modes b87c9c4, game review 54f6600, tin soldier + biped pawn 5a06397, meadow scene + calm music 7e2d01b. 52 tests, build OK. Pending human checks: listen to the meadow music; play a full game in the meadow. No push.
