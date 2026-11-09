@@ -17,6 +17,10 @@ Branch: `feat/chess-3d-monsters` · Delivery: `single-pr` (unattended overnight 
 - S9 — Animated ordinary moves per piece: "sería posible también tener animaciones al mover las fichas? por ejemplo, el caballo se podría convertir en un caballero montado que anda de verdad, la torre en un gran mounstruo de barrio que anda, ....".
 
 Assumption (A1): pieces and monsters are generated procedurally in code (no external model files) so the transformation piece→monster is fully controllable and license-free; external models can be swapped in later through the piece factory.
+- S13 — Favicon: "pon un logo a la web para que se vea en la barra del navegador"
+- S14 — Fewer spider walkers: "demasiadas figuras se mueves como \"una araña\". Revisa eso. Por ejemplo el alfil podría ser un soldadito (como los soldaditos de plomo). Y los peones, no se que se te ocurre, pero la animación de que comen me hace gracia."
+- S15 — Second scene: "Hay demasiadas luces y brillos. Si te parece, no lo cambies, pero añade otra opción con un fondo más alegre, por ejemplo jugando en una montaña, con una musica menos intensa y un bonito y relajante entorno."
+- S16 — Camera modes: "Añade más opciones a la camara. Solo deja auto si/no. Puede tener auto, vista libre o una serie de otras vistas precalculadas (zenital, lateral, ... lo que se te ocurra)"
 
 ## Tasks
 
@@ -35,6 +39,10 @@ Assumption (A1): pieces and monsters are generated procedurally in code (no exte
 | T12 | S10 | inline | done (lab close-ups, king iaido and queen crystal finisher inspected in Chrome; figure unit tests; 90-ply random game clean) | 375e94b |
 | T13 | S11 | inline | done (es/en, system default, remembered choice, live switch; checked in Chrome) | f3331e4 |
 | T14 | S12 | inline | done (renamed to Checkmaw) | 07aa23f |
+| T15 | S13 | inline | done (favicon checked at 256/32/16 px in Chrome) | see git log |
+| T16 | S16 | inline | pending | |
+| T17 | S14 | inline | pending | |
+| T18 | S15 | inline | pending | |
 | T11 | S9 | inline | done (knight L gallop and marches inspected in Chrome) | d3fbcae |
 
 - T1 Scaffold: Vite + TS + Three.js + chess.js + Vitest, hexagonal layout.
@@ -69,3 +77,4 @@ Route evidence: no writer trigger (single sequential unattended session, no para
 - L14 (2026-11-09): (1) c8b12d0 — the cut halves were flipped under the board (euler overwrite); now rotated with quaternions and glowing. (2) 08c4130 — rook brute gets two clawed beast legs solved with two-bone IK; tests assert both feet on the floor and one lifted mid-stride. (3) Offline audio analysis (OfflineAudioContext) showed a 15-30 dB imbalance (roar 0.6 peak vs hooves 0.02, queen steps 0.008) and setTimeout-scheduled sounds that ignored the audio clock; added per-sound LEVELS, scheduled everything on the audio clock, and `Sfx.measure`/`chess.soundCheck()`. All peaks now 0.05-0.51, none clipping. Still not listened to by a human.
 - L15 (2026-11-09, user): "como continuarías? por cierto, me falta que pueda cambiarle de idioma y por defecto coja el de el pc. además, el nombre de Monster Chess no vale. Hay que encontrar un nombre que no lance resultados en Google. Algo que sea original y único." → T13 done: src/ui/i18n.ts (en/es dictionaries, detectLanguage from navigator.languages, localStorage choice), HUD redraws live incl. open dialogs, battle captions translated, title kept in APP_NAME for the rename. 39/39 tests. T14: candidates with zero exact-match web results (Checkmaw, Mawmate, Gnashmate, Escaquimera); awaiting choice.
 - L16 (2026-11-09, user): "que te parece ChessCheck? la alternativa que más me ha gustado hasta ahora es checkmaw" → advised against ChessCheck (generic phrase, prior "Chess Check" e-zine); noted Checkmaw sits near Steam's CheckMaze. User: "vamos con checkmaw." → renamed (APP_NAME, page title, README, package name).
+- L17 (2026-11-10) — User: favicon; bishop as tin soldier, pawn rethink keeping its eating; optional cheerful mountain scene with calmer music; camera modes (auto, free, presets). Plan: T15 favicon, T16 camera modes, T17 walkers (bishop figure, pawn biped gremlin), T18 mountain scene + calm music.
