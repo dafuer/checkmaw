@@ -155,8 +155,10 @@ export class Stage {
 
   private frame(): void {
     const dt = Math.min(this.clock.getDelta(), 1 / 20);
+    // Pieces and particles follow the same clock as the tweens, slow motion included.
+    const scaled = dt * this.animator.scale;
     this.animator.update(dt);
-    for (const listener of this.frameListeners) listener(dt * this.animator.speed);
+    for (const listener of this.frameListeners) listener(scaled);
     // OrbitControls clamps the camera distance even when disabled, which would
     // fight scripted cinematics; while disabled we only aim the camera.
     if (this.controls.enabled) this.controls.update();

@@ -47,6 +47,9 @@ type Ticker = (dt: number, time: number) => void | boolean;
  */
 export class Animator {
   speed = 1;
+  /** Temporary slow-down (hit-stop, slow motion): factor and real seconds left. */
+  private warp = 1;
+  private warpLeft = 0;
   private tweens: Tween[] = [];
   private tickers = new Set<Ticker>();
   private time = 0;
@@ -77,8 +80,32 @@ export class Animator {
     return this.time;
   }
 
+  /** How fast animation time runs right now: the player's speed times any active warp. */
+  get scale(): number {
+    return this.speed * (this.warpLeft > 0 ? this.warp : 1);
+  }
+
+  /**
+   * Runs everything at `factor` speed for `realSeconds` of wall-clock time: a
+   * few frozen frames sell an impact, a longer stretch is slow motion.
+   * Fast-forwarding shortens it.
+   */
+  warpTime(factor: number, realSeconds: number): void {
+    this.warp = factor;
+    this.warpLeft = realSeconds;
+  }
+
+  /** How many tweens and tickers are still running (for leak checks). */
+  get pending(): { tweens: number; tickers: number } {
+    return { tweens: this.tweens.length, tickers: this.tickers.size };
+  }
+
   update(rawDt: number): void {
-    const dt = rawDt * this.speed;
+    const dt = rawDt * this.scale;
+    if (this.warpLeft > 0) {
+      this.warpLeft -= rawDt * Math.max(1, this.speed);
+      if (this.warpLeft < 1e-9) this.warpLeft = 0;
+    }
     this.time += dt;
     const active = this.tweens;
     this.tweens = [];

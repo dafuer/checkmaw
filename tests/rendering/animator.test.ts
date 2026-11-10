@@ -43,3 +43,40 @@ describe('Animator', () => {
     }
   });
 });
+
+describe('Animator time warp', () => {
+  it('slows every tween for a stretch of real time, then returns to normal', () => {
+    const animator = new Animator();
+    let value = 0;
+    void animator.tween(1, (t) => (value = t), ease.linear);
+    animator.warpTime(0.1, 0.2);
+    expect(animator.scale).toBeCloseTo(0.1);
+    animator.update(0.1);
+    expect(value).toBeCloseTo(0.01);
+    animator.update(0.1);
+    expect(value).toBeCloseTo(0.02);
+    expect(animator.scale).toBe(1);
+    animator.update(0.1);
+    expect(value).toBeCloseTo(0.12);
+  });
+
+  it('ends a warp sooner while the player fast-forwards', () => {
+    const animator = new Animator();
+    animator.speed = 4;
+    animator.warpTime(0.5, 0.4);
+    expect(animator.scale).toBe(2);
+    animator.update(0.1);
+    expect(animator.scale).toBe(4);
+  });
+
+  it('reports what is still running', async () => {
+    const animator = new Animator();
+    const done = animator.tween(0.1, () => {});
+    const stop = animator.every(() => false);
+    expect(animator.pending).toEqual({ tweens: 1, tickers: 1 });
+    animator.update(0.2);
+    await done;
+    stop();
+    expect(animator.pending).toEqual({ tweens: 0, tickers: 0 });
+  });
+});
