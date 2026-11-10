@@ -8,6 +8,8 @@ Everything is generated in code — the pieces, the monsters, the textures and t
 sound effects — so the project uses **no external art or audio assets** and no
 licences beyond the permissive open-source libraries listed below.
 
+**Play it online:** https://dafuer.github.io/checkmaw/
+
 ## Run it
 
 ```bash
@@ -23,13 +25,17 @@ Other scripts:
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Type check + production build into `dist/` |
 
+Every push to `main` runs the tests, builds the game and publishes it to GitHub
+Pages (`.github/workflows/pages.yml`). The production build uses the base path
+`/checkmaw/` (see `vite.config.ts`); the dev server stays at the root.
+
 ## How to play
 
 - Click one of your pieces, then a glowing square. Green dots are moves, red rings are captures.
 - Drag to orbit the camera, scroll to zoom.
 - Hold **Space** to fast-forward a battle; press **U** to undo.
 - Top-right controls: Undo, New game, Battles on/off (instant captures when off),
-  Walks on/off (animated ordinary moves), Camera, Sound.
+  Walks on/off (animated ordinary moves), Camera, Scene, Sound and 🌐 language.
 - **Camera** (or press **C**) cycles the views: *auto* (turns to the side to
   move), *free* (stays where you leave it), *top* (straight down), *side*,
   *corner* (diagonal three-quarter view) and *orbit* (circles the board slowly).
