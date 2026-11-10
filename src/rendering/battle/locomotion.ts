@@ -5,6 +5,8 @@ import type { Particles } from '../effects/particles';
 import { TEAM_GLOW, type PieceView } from '../pieces/pieceView';
 import type { GearPose } from '../pieces/gear';
 import type { Stage } from '../stage';
+import type { Fx } from '../effects/fx';
+import type { Variety } from './variety';
 
 export function angleLerp(a: number, b: number, t: number): number {
   let d = b - a;
@@ -29,6 +31,9 @@ export class Locomotion {
     private readonly stage: Stage,
     private readonly particles: Particles,
     private readonly sfx: Sfx,
+    /** Effects and variant picker for the move styles (not wired in yet). */
+    readonly fx?: Fx,
+    readonly variety?: Variety,
   ) {}
 
   private get anim() {
@@ -226,7 +231,15 @@ export class Locomotion {
     const reach0 = piece.tentacleReach;
     const rear0 = piece.rear;
     const av0 = piece.avatar;
-    if (piece.figure) piece.figure.drawn = 0;
+    const pitch0 = piece.pitch;
+    const roll0 = piece.roll;
+    const squash0 = piece.squash;
+    // Finish any spin the short way round.
+    const twist0 = Math.atan2(Math.sin(piece.twist), Math.cos(piece.twist));
+    if (piece.figure) {
+      piece.figure.drawn = 0;
+      piece.figure.winding = 0;
+    }
     await Promise.all([
       this.anim.tween(duration, (t) => {
         piece.monster = lerp(m0, 0, t);
@@ -238,12 +251,22 @@ export class Locomotion {
         piece.tentacleReach = lerp(reach0, 0, t);
         piece.rear = lerp(rear0, 0, t);
         piece.avatar = lerp(av0, 0, t);
+        piece.pitch = lerp(pitch0, 0, t);
+        piece.roll = lerp(roll0, 0, t);
+        piece.twist = lerp(twist0, 0, t);
+        piece.squash = lerp(squash0, 1, t);
       }, ease.inOutCubic),
       this.restPose(piece, duration),
       this.turn(piece, piece.restFacing, duration),
     ]);
     piece.airborne = false;
     piece.body.rotation.set(0, 0, 0);
+    piece.root.position.y = 0;
+    if (piece.mount) {
+      piece.mount.gallop = 0;
+      piece.mount.couch = 0;
+      piece.mount.windup = 0;
+    }
     if (hop0 > 0.05) this.sfx.step();
   }
 

@@ -131,6 +131,15 @@ export class PieceView {
   /** Extra vertical offset (jumps); legs stop grounding while airborne. */
   hop = 0;
   airborne = false;
+  /**
+   * Whole-body acting around the base, whatever form the piece is in: lean
+   * forward (pitch) or sideways (roll), spin on the spot (twist), all in
+   * radians, and squash (1 = none, below 1 flattens and widens).
+   */
+  pitch = 0;
+  roll = 0;
+  twist = 0;
+  squash = 1;
   private blink = 0;
   private nextBlink = 2 + Math.random() * 4;
   private time = Math.random() * 10;
@@ -252,7 +261,10 @@ export class PieceView {
     const lift = tr.lift * m * bulk;
     this.body.position.y = lift + this.hop + Math.max(0, breathe);
     this.body.scale.set((1 + m * 0.08 + breathe) * bulk, (1 + m * 0.12 - breathe) * bulk, (1 + m * 0.08 + breathe) * bulk);
+    const wide = Math.min(1.8, 1 / Math.sqrt(Math.max(0.05, this.squash)));
+    this.rig.scale.set(wide, this.squash, wide);
     if (this.mount) this.applyMount(t);
+    else this.rig.rotation.set(this.pitch, this.twist, this.roll);
     if (this.figure) {
       // The chess piece shrinks away as the figure rises out of it.
       const a = this.figure.amount;
@@ -302,7 +314,7 @@ export class PieceView {
     }
     // Rear up around the hind hooves.
     const angle = -this.rear * 0.75;
-    this.rig.rotation.x = angle;
+    this.rig.rotation.set(angle + this.pitch, this.twist, this.roll);
     this.rig.position.set(0, REAR_PIVOT_Z * Math.sin(angle), REAR_PIVOT_Z - REAR_PIVOT_Z * Math.cos(angle));
   }
 
@@ -324,6 +336,10 @@ export class PieceView {
     this.hop = 0;
     this.airborne = false;
     this.gait = 0;
+    this.pitch = 0;
+    this.roll = 0;
+    this.twist = 0;
+    this.squash = 1;
     this.tongueOut = 0;
     this.tentacleReach = 0;
     this.armed = 0;
@@ -348,6 +364,13 @@ export class PieceView {
   weaponTip(target = new THREE.Vector3()): THREE.Vector3 {
     if (this.mount) return this.mount.lanceTipWorld(target);
     if (this.gear) return this.gear.tip(target);
+    return this.mouthWorld(target);
+  }
+
+  /** World position of the hand holding the weapon (the other end of a weapon trail). */
+  weaponGrip(target = new THREE.Vector3()): THREE.Vector3 {
+    if (this.mount) return this.mount.lanceGripWorld(target);
+    if (this.gear) return this.gear.grip(target);
     return this.mouthWorld(target);
   }
 

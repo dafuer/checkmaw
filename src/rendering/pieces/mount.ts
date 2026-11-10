@@ -50,6 +50,10 @@ export class Mount {
     return this.lanceTip.getWorldPosition(target);
   }
 
+  lanceGripWorld(target = new THREE.Vector3()): THREE.Vector3 {
+    return this.lanceArm.getWorldPosition(target);
+  }
+
   /** Vertical offset of the horse's chest, so the head (piece body) can ride along. */
   get bob(): number {
     return Math.abs(Math.sin(this.gallopPhase)) * 0.06 * this.gallop;

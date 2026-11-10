@@ -15,7 +15,7 @@ Assumptions: (A1) "unas cuantas" = at least three capture finishers and at least
 | ID | Specs | Route | Status | Commit |
 |----|-------|-------|--------|--------|
 | T0 | S3 | inline | done (`git tag -l` shows V1.0 on 9a00242) | — |
-| T1 | S2 | inline | pending | |
+| T1 | S2 | inline | done (variety + time-warp unit tests) | 1st commit on branch |
 | T2 | S1 | inline | pending | |
 | T3 | S1, S2 | inline | pending | |
 | T4 | S1, S2 | inline | pending | |
@@ -35,3 +35,4 @@ Route evidence: no writer trigger (one sequential unattended session, units shar
 
 - L1 (2026-11-10, original request): "tengo curiosidad de probar el modelo más inteligente, Fable 5.2 Para ello se me ha ocurrido que revisas el proyecto y trates de impresionarme mejorando las animaciones. Además me gustaría que no fueran siempre las mismas. Es decir, que una ficha al matar a otra (o al moverse) pudiera hacerlo cada vez de una manera (no sé, unas cuantas precalculadas y en función de un numero aleatorio elegir). Me voy a la cama y quiero dejarte trabajando de manera autonoma. Mañana me levanto y lo reviso. Además me gustaría que pusieras un tag a la versión actual, antes de los cambios de fable, que sea V1.0. Adelante (y recuerda que tienes acceso a chrome)"
 - L2 (2026-11-10): Baseline: 52 tests green on `main`. RDD is off for this clone (decided earlier by the user), so no native review is run.
+- L3 (2026-11-10, session cut by usage limit): Written but NOT yet wired into the game: `duelKit.ts` (shared duel beats), `finishers/{pawn,knight,bishop,rook,queen,king}.ts` (19 finishers: 6 ported + 13 new), `reactions.ts` (counter/cower/taunt), `finisherNames.ts` (catalogue of finisher, march, reaction, camera and finale names), new Fx (trail, pillar, beam, groundCrack, dizzyStars, afterimage, dissolve), `Stage.punch`, PieceView pitch/roll/twist/squash. The game still runs the old `battleDirector.ts`. Nothing new has been seen in Chrome yet. Next: rewrite `BattleDirector.battle` to use DuelKit + Variety + FINISHERS + REACTIONS (with try/finally), camera styles, march styles in Locomotion (names in MARCH_NAMES), finale variants, finisher caption (i18n en/es), headless smoke test of every attacker x victim x finisher, visual checks in Chrome, README.

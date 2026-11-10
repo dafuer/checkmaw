@@ -158,6 +158,11 @@ export class Gear {
     return this.tipAnchor.getWorldPosition(target);
   }
 
+  /** World position of the right hand, where the weapon is held. */
+  grip(target = new THREE.Vector3()): THREE.Vector3 {
+    return this.arms[0].wrist.getWorldPosition(target);
+  }
+
   apply(time: number, gait: number, gaitPhase: number): void {
     const out = this.out;
     this.group.visible = out > 0.01;

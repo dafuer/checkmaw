@@ -28,6 +28,8 @@ export class Stage {
   private readonly clock = new THREE.Clock();
   private shake = 0;
   private flightToken = 0;
+  private punchToken = 0;
+  private readonly baseFov = 42;
   private readonly frameListeners = new Set<(dt: number) => void>();
 
   constructor(container: HTMLElement) {
@@ -48,7 +50,7 @@ export class Stage {
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     this.scene.environmentIntensity = 0.35;
 
-    this.camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(this.baseFov, container.clientWidth / container.clientHeight, 0.1, 200);
     this.camera.position.set(0, 11.2, 8.4);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -142,6 +144,21 @@ export class Stage {
       },
       easing,
     );
+  }
+
+  /** A quick zoom kick on impact: the field of view narrows by `degrees` and springs back. */
+  async punch(degrees: number, duration = 0.35): Promise<void> {
+    const token = ++this.punchToken;
+    await this.animator.tween(duration, (t) => {
+      if (token !== this.punchToken) return;
+      // Fast in, slow out.
+      const k = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+      this.camera.fov = this.baseFov - degrees * k;
+      this.camera.updateProjectionMatrix();
+    }, ease.linear);
+    if (token !== this.punchToken) return;
+    this.camera.fov = this.baseFov;
+    this.camera.updateProjectionMatrix();
   }
 
   /** Smoothly blends the bloom strength, for dramatic beats. */
