@@ -225,12 +225,13 @@ export class Fx {
   async pillar(at: THREE.Vector3, color: THREE.ColorRepresentation, height = 5, radius = 0.35, duration = 0.6): Promise<void> {
     const geo = new THREE.CylinderGeometry(1, 1, 1, 24, 1, true);
     geo.translate(0, 0.5, 0);
-    const { mesh, material, dispose } = this.glow(geo, color, 1.6);
+    // Kept dim: it is additive, drawn twice (both faces) and then bloomed.
+    const { mesh, material, dispose } = this.glow(geo, color, 0.8);
     mesh.position.copy(at).setY(0.02);
     await this.anim.tween(duration, (t) => {
       const r = radius * (t < 0.2 ? t / 0.2 : 1 - (t - 0.2) * 0.9);
       mesh.scale.set(Math.max(0.001, r), height, Math.max(0.001, r));
-      material.opacity = t < 0.2 ? 1 : 1 - (t - 0.2) / 0.8;
+      material.opacity = 0.4 * (t < 0.2 ? 1 : 1 - (t - 0.2) / 0.8);
     }, ease.linear);
     dispose();
   }

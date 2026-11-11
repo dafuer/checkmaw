@@ -29,6 +29,8 @@ export interface Finisher {
 export class DuelKit {
   readonly fx: Fx;
   readonly moves: Locomotion;
+  /** Height a finisher wants kept in frame (a blade in the sky, a leap); the camera pulls back for it. */
+  focusTop = 0;
   /** Fixed pool so the number of lights (and thus shader programs) never changes. */
   private readonly lights: [THREE.PointLight, THREE.PointLight];
 

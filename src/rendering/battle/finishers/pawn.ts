@@ -217,14 +217,14 @@ const slurp: Finisher = {
     kit.impact(0.4);
     // Timber! The victim, facing its attacker, topples forward at its feet.
     const tall = Math.max(0.6, kit.topOf(v));
-    void kit.anim.tween(0.3, (t) => {
-      a.root.position.copy(base).addScaledVector(fwd, 0.12 * (1 - t));
-      a.twist = 0.5 * (1 - t);
-      a.squash = 0.78 + 0.22 * t;
-    });
-    await kit.anim.tween(0.2, (t) => (v.pitch = -0.12 * Math.sin(t * Math.PI)), ease.inOutQuad);
+    // The gnasher hops back out from under it, just far enough for the head to land at its feet.
+    const clear = v.root.position.clone().addScaledVector(fwd, -Math.max(a.root.position.distanceTo(v.root.position), tall * 0.9 + 0.4));
+    a.twist = 0;
+    a.squash = 1;
+    void kit.arc(a, clear, 0.22, 0.4);
+    await kit.anim.tween(0.25, (t) => (v.pitch = -0.12 * Math.sin(t * Math.PI)), ease.inOutQuad);
     kit.sfx.whoosh();
-    await kit.anim.tween(0.5, (t) => (v.pitch = t * (Math.PI / 2)), ease.outBounce);
+    await kit.anim.tween(0.55, (t) => (v.pitch = t * (Math.PI / 2)), ease.outBounce);
     const head = v.root.position.clone().addScaledVector(fwd, -tall * 0.9);
     kit.sfx.impact();
     kit.stage.addShake(0.45);

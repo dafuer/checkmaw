@@ -99,6 +99,7 @@ export class BattleDirector {
       void this.stage.flyTo(savedPose, 0.6);
     } finally {
       stopTracking();
+      kit.focusTop = 0;
       this.hooks.announce(null);
       this.hooks.announceMove(null);
       kit.stopTremble(victim);
@@ -247,7 +248,7 @@ export class BattleDirector {
         break;
       case 'high':
         // A three-quarter view from above.
-        position = mid.clone().addScaledVector(side, dist * 0.85).add(new THREE.Vector3(0, 3.1 + len * 0.3, 0)).addScaledVector(d, -1.1);
+        position = mid.clone().addScaledVector(side, dist).add(new THREE.Vector3(0, 2.5 + len * 0.25, 0)).addScaledVector(d, -0.5);
         break;
       case 'shoulder':
         // Behind the attacker, off to one side, with the victim ahead.
@@ -270,10 +271,11 @@ export class BattleDirector {
       dir.applyAxisAngle(up, drift * dt);
       const a = attacker.root.position;
       const v = victim.root.visible ? victim.root.position : a;
-      const top = Math.max(a.y + attacker.hop + attacker.height * 0.6, v.y + 0.4);
+      const top = Math.max(a.y + attacker.hop + attacker.height * 0.6, v.y + 0.4, this.kit.focusTop);
       tmp.set((a.x + v.x) / 2, Math.max(0.6, top * 0.75), (a.z + v.z) / 2);
       const separation = Math.hypot(a.x - v.x, a.z - v.z);
-      const dist = 2.9 + separation * 0.55 + top * 1.0;
+      // Bulky monsters need more room in the frame.
+      const dist = 2.9 + separation * 0.55 + top * 1.0 + ((attacker.traits.bulk ?? 1) - 1) * 2.4 * attacker.monster;
       const k = 1 - Math.exp(-dt * 2.5);
       target.lerp(tmp, k);
       cam.lerp(tmp.clone().addScaledVector(dir, dist), k);

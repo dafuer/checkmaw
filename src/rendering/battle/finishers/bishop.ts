@@ -128,7 +128,7 @@ const clockwork: Finisher = {
     const normal = new THREE.Vector3(0, Math.SQRT1_2, Math.SQRT1_2);
     const cut = kit.cut(v, normal, mid * Math.SQRT1_2);
     const hot = kit.hot(a);
-    cut.burn(hot, 1.6);
+    cut.burn(hot, 0.9);
     const [upper] = cut.halves;
     const u0 = upper.position.clone();
     const slide = new THREE.Vector3(fwd.x * Math.SQRT1_2, -Math.SQRT1_2, fwd.z * Math.SQRT1_2);
@@ -136,7 +136,7 @@ const clockwork: Finisher = {
     await kit.anim.wait(0.3);
     kit.sfx.crack();
     await kit.anim.tween(0.75, (t) => {
-      cut.burn(hot, 1.6 * (1 - t) + 0.25);
+      cut.burn(hot, 0.9 * (1 - t) + 0.2);
       upper.position.copy(u0).addScaledVector(slide, t * Math.min(0.75, mid * 1.1));
       if (Math.random() < 0.6) kit.particles.sparksAt(u0.clone().setY(mid).addScaledVector(fwd, t * 0.2), { count: 2, color: glow, speed: 1, life: 0.4, gravity: 3 });
     }, ease.inQuad);
@@ -184,7 +184,8 @@ const judgement: Finisher = {
     geo.translate(0, 0, -0.02);
     const blade = kit.fx.glow(geo, glow, 1.5);
     const cam = kit.stage.camera.position;
-    const hover = 3.4;
+    const hover = kit.topOf(v) + 0.45;
+    kit.focusTop = hover + 1.9;
     blade.mesh.position.copy(V).setY(hover);
     const face = kit.anim.every(() => {
       blade.mesh.rotation.y = Math.atan2(cam.x - blade.mesh.position.x, cam.z - blade.mesh.position.z);
@@ -193,7 +194,7 @@ const judgement: Finisher = {
     kit.implode(V.clone().setY(hover + 1.4), glow, 90, 1.6, 0.4);
     kit.sfx.shimmer();
     await kit.anim.tween(0.45, (t) => {
-      blade.mesh.scale.setScalar(Math.max(0.001, t));
+      blade.mesh.scale.setScalar(Math.max(0.001, t * 0.8));
       blade.material.opacity = Math.min(1, t * 1.5);
       v.pitch = -0.35 * t;
     }, ease.outBack);
@@ -209,15 +210,16 @@ const judgement: Finisher = {
       kit.moves.pose(a, { raise: 0, strike: 1 }, 0.14, ease.inCubic),
       kit.anim.tween(0.17, (t) => (blade.mesh.position.y = hover * (1 - t)), ease.inCubic),
     ]);
+    kit.focusTop = 0;
     kit.sfx.clang();
     kit.sfx.crack();
     kit.groundSlam(V, 1.6, glow);
     void kit.fx.pillar(V, glow, 6, 0.55, 0.7);
-    void kit.stage.pulseBloom(2.3, 0.7);
-    kit.particles.sparksAt(V.clone().setY(0.4), { count: 150, color: glow, speed: 4.5, life: 0.9, drag: 1.5 });
+    void kit.stage.pulseBloom(1.5, 0.7);
+    kit.particles.sparksAt(V.clone().setY(0.4), { count: 80, color: glow, speed: 4.5, life: 0.9, drag: 1.5 });
     v.pitch = 0;
     v.squash = 0.86;
-    v.setGlow(2);
+    v.setGlow(1);
     await kit.anim.wait(0.4);
     // The victim crumbles away from the top down as the blade fades.
     const top = kit.topOf(v);
@@ -226,7 +228,7 @@ const judgement: Finisher = {
     kit.sfx.crack();
     await kit.anim.tween(0.8, (t) => {
       level = (top + 0.05) * (1 - t);
-      v.setGlow(2);
+      v.setGlow(1);
       blade.material.opacity = 1 - t;
       blade.mesh.position.y = t * 0.6;
       kit.particles.sparksAt(V.clone().setY(level), { count: 5, color: glow, speed: 1.2, life: 0.7, gravity: -1.5, spread: new THREE.Vector3(0.35, 0, 0.35) });

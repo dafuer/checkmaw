@@ -116,8 +116,8 @@ const homeRun: Finisher = {
     kit.sfx.crack();
     kit.sfx.impact();
     kit.hitSparks(hit, v, 110);
-    kit.particles.sparksAt(hit, { count: 60, color: 0xffffff, speed: 5, life: 0.4, drag: 3 });
-    void kit.stage.pulseBloom(2, 0.4);
+    kit.particles.sparksAt(hit, { count: 30, color: 0xffffff, speed: 5, life: 0.4, drag: 3 });
+    void kit.stage.pulseBloom(1.5, 0.4);
     kit.anim.warpTime(0.03, 0.2);
     void kit.stage.punch(6, 0.6);
     kit.stage.addShake(0.9);
