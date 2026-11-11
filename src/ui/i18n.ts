@@ -1,3 +1,4 @@
+import type { FinisherName } from '../rendering/battle/finisherNames';
 import type { Color, GameResult, PieceType } from '../domain/types';
 import type { CameraMode } from '../rendering/cameraModes';
 import type { SceneName } from '../rendering/scenery';
@@ -56,6 +57,8 @@ interface Dictionary {
   /** What each piece turns into during a battle. */
   form: Record<PieceType, string>;
   becomes: string;
+  /** Name of each finishing move, shown as it is played. */
+  finisher: Record<FinisherName, string>;
 }
 
 const DICTIONARIES: Record<Lang, Dictionary> = {
@@ -116,6 +119,27 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
       k: 'the Sovereign',
     },
     becomes: '{piece} becomes {form}',
+    finisher: {
+      gulp: 'Skewer & Gulp',
+      pounce: 'Death from Above',
+      whirlwind: 'Whirlwind',
+      slurp: 'Timber & Slurp',
+      joust: 'Joust',
+      trample: 'Trample',
+      skyLance: 'Sky Lance',
+      cleave: 'Cleave',
+      clockwork: 'Clockwork Flurry',
+      judgement: 'Judgement',
+      slam: 'Slam & Snack',
+      homeRun: 'Home Run',
+      nail: 'Hammer Time',
+      crystal: 'Crystal Tomb',
+      singularity: 'Singularity',
+      stardust: 'Stardust',
+      iaido: 'One Stroke',
+      riposte: 'Riposte',
+      skyfall: 'Skyfall',
+    },
   },
   es: {
     languageName: 'Español',
@@ -174,6 +198,27 @@ const DICTIONARIES: Record<Lang, Dictionary> = {
       k: 'el Soberano',
     },
     becomes: '{piece} se convierte en {form}',
+    finisher: {
+      gulp: 'Ensartar y tragar',
+      pounce: 'Muerte desde el cielo',
+      whirlwind: 'Torbellino',
+      slurp: 'Talar y sorber',
+      joust: 'Justa',
+      trample: 'Pisoteo',
+      skyLance: 'Lanza celeste',
+      cleave: 'Tajo',
+      clockwork: 'Ráfaga de relojería',
+      judgement: 'Sentencia',
+      slam: 'Aplastar y merendar',
+      homeRun: 'Fuera del tablero',
+      nail: 'A martillazos',
+      crystal: 'Tumba de cristal',
+      singularity: 'Singularidad',
+      stardust: 'Polvo de estrellas',
+      iaido: 'Un solo tajo',
+      riposte: 'Estocada de respuesta',
+      skyfall: 'Caída del cielo',
+    },
   },
 };
 

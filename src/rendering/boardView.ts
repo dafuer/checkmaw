@@ -111,7 +111,8 @@ export class BoardView {
     const kings = [...this.views.values()].filter((v) => v.type === 'k');
     const winner = kings.find((k) => k.color === winnerColor);
     const loser = kings.find((k) => k.color !== winnerColor);
-    if (winner) await this.director.celebrate(winner, loser);
+    const allies = [...this.views.values()].filter((v) => v.color === winnerColor);
+    if (winner) await this.director.celebrate(winner, loser, allies);
   }
 
   private async move(id: string, to: Square): Promise<void> {

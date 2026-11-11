@@ -1,3 +1,4 @@
+import type { FinisherName } from '../rendering/battle/finisherNames';
 import type { Color, GameResult, Piece, PieceType, PromotionType } from '../domain/types';
 import { CAMERA_MODES, type CameraMode } from '../rendering/cameraModes';
 import { SCENES, type SceneName } from '../rendering/scenery';
@@ -71,6 +72,7 @@ export class Hud {
   private turnState: { color: Color; inCheck: boolean; result: GameResult | null } = { color: 'w', inCheck: false, result: null };
   private captured: Piece[] = [];
   private captionPiece: PieceType | null = null;
+  private captionMove: FinisherName | null = null;
 
   constructor(container: HTMLElement, actions: HudActions, private readonly i18n: I18n, settings: HudSettings) {
     const header = el('header', 'panel header');
@@ -205,6 +207,16 @@ export class Hud {
     this.captionPiece = type;
     this.captionEl.textContent = type ? this.i18n.becomes(type) : '';
     this.captionEl.classList.toggle('show', !!type);
+    this.captionEl.classList.remove('move');
+  }
+
+  /** Shows the name of the finishing move being played, or hides it with null. */
+  announceMove(name: FinisherName | null): void {
+    this.captionMove = name;
+    if (this.captionPiece) return;
+    this.captionEl.textContent = name ? this.i18n.t.finisher[name] : '';
+    this.captionEl.classList.toggle('show', !!name);
+    this.captionEl.classList.toggle('move', !!name);
   }
 
   askPromotion(color: Color): Promise<PromotionType> {
@@ -244,6 +256,7 @@ export class Hud {
     this.redrawTurn();
     this.redrawCaptured();
     if (this.captionPiece) this.captionEl.textContent = this.i18n.becomes(this.captionPiece);
+    else if (this.captionMove) this.captionEl.textContent = this.i18n.t.finisher[this.captionMove];
     this.redrawOverlay();
   }
 

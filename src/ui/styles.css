@@ -118,6 +118,12 @@ html, body {
   z-index: 6;
 }
 .caption.show { opacity: 1; transform: none; }
+.caption.move {
+  font-size: 40px;
+  font-style: italic;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 22px #ffb02a, 0 0 6px #000;
+}
 
 .overlay {
   position: absolute;

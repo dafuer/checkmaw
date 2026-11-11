@@ -41,6 +41,7 @@ const hud = new Hud(container, {
 const view = new BoardView(stage, sfx, {
   letterbox: (on) => hud.letterbox(on),
   announce: (type) => hud.announce(type),
+  announceMove: (name) => hud.announceMove(name),
 });
 stage.scene.add(view.group);
 
